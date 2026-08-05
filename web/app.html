@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="RaftOff Social — Find Your Crew. Find Your Spot. Live lake map for Michigan lakes."
+    />
+    <meta name="theme-color" content="#05040a" />
+    <title>App · RaftOff Social</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="app-body">
+    <div class="app-shell">
+      <header class="app-top">
+        <div class="lake-select" id="lake-select" title="Home lake">
+          <span class="lake-select-label">RaftOff Social · live</span>
+          <strong>St. Clair</strong>
+        </div>
+        <div class="top-actions">
+          <button type="button" class="icon-btn" id="btn-search" aria-label="Search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="1.8" />
+              <path d="M16 16l4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </button>
+          <button type="button" class="icon-btn" id="btn-alerts" aria-label="Notifications">
+            <span class="notif-dot" aria-hidden="true"></span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M6 16h12l-1.2-2.2a6.2 6.2 0 0 1-.6-2.7V9.5a4.2 4.2 0 1 0-8.4 0v1.6c0 .95-.2 1.88-.6 2.7L6 16Z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+              />
+              <path d="M10 18a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </button>
+          <span class="free-badge">Free</span>
+        </div>
+      </header>
+
+      <main class="app-main">
+        <!-- MAP -->
+        <section class="panel is-active" id="panel-map" data-panel="map">
+          <div class="live-strip" id="summary-card">
+            <span class="live-pill"><span class="live-dot"></span> <strong id="summary-active">12 check-ins</strong></span>
+            <span class="live-meta">Hot · <strong id="summary-hot">Sandbar East</strong></span>
+            <span class="live-meta" id="summary-updated">just now</span>
+          </div>
+
+          <div class="filter-row" id="vibe-filters" aria-label="Vibe filters"></div>
+
+          <div class="map-stage">
+            <svg
+              class="lake-map"
+              viewBox="0 0 800 640"
+              role="img"
+              aria-label="Lake St. Clair activity map"
+            >
+              <defs>
+                <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#1a6f8f" />
+                  <stop offset="45%" stop-color="#0d4560" />
+                  <stop offset="100%" stop-color="#071828" />
+                </linearGradient>
+                <radialGradient id="waterGlow" cx="55%" cy="40%" r="45%">
+                  <stop offset="0%" stop-color="#ff4d8d" stop-opacity="0.22" />
+                  <stop offset="55%" stop-color="#2ef2c8" stop-opacity="0.18" />
+                  <stop offset="100%" stop-color="#071828" stop-opacity="0" />
+                </radialGradient>
+                <pattern id="shoreNoise" width="8" height="8" patternUnits="userSpaceOnUse">
+                  <circle cx="1" cy="1" r="0.6" fill="rgba(255,255,255,0.04)" />
+                </pattern>
+              </defs>
+              <rect width="800" height="640" fill="#071520" />
+              <path
+                d="M60 90 C180 40 340 50 460 110 C580 50 700 80 760 160
+                   L780 520 C680 590 520 610 380 560 C240 610 120 560 50 470 Z"
+                fill="#12283a"
+              />
+              <path
+                class="lake-body"
+                d="M140 170 C260 110 400 120 510 170 C620 130 700 180 730 260
+                   C760 360 720 470 640 520 C500 580 340 560 230 500
+                   C140 540 90 450 100 340 C105 250 90 200 140 170 Z"
+                fill="url(#water)"
+              />
+              <path
+                d="M140 170 C260 110 400 120 510 170 C620 130 700 180 730 260
+                   C760 360 720 470 640 520 C500 580 340 560 230 500
+                   C140 540 90 450 100 340 C105 250 90 200 140 170 Z"
+                fill="url(#waterGlow)"
+              />
+              <path
+                d="M140 170 C260 110 400 120 510 170 C620 130 700 180 730 260
+                   C760 360 720 470 640 520 C500 580 340 560 230 500
+                   C140 540 90 450 100 340 C105 250 90 200 140 170 Z"
+                fill="url(#shoreNoise)"
+              />
+              <text x="48" y="52" class="map-title">Lake St. Clair</text>
+              <text x="48" y="74" class="map-sub">Metro Detroit · live activity</text>
+              <g id="place-layer"></g>
+              <g id="checkin-layer"></g>
+            </svg>
+
+            <aside class="sheet" id="map-sheet" hidden>
+              <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
+              <div class="sheet-vibe" id="sheet-vibe"></div>
+              <h2 id="sheet-title"></h2>
+              <p id="sheet-meta"></p>
+              <p id="sheet-body"></p>
+              <div class="sheet-actions">
+                <button type="button" class="btn btn-primary" id="sheet-anchor">Drop Anchor here</button>
+                <button type="button" class="btn btn-ghost" id="sheet-feed">Open in feed</button>
+              </div>
+            </aside>
+
+            <button type="button" class="fab-anchor" id="fab-anchor" aria-label="Drop Anchor">
+              Drop Anchor
+            </button>
+          </div>
+
+          <p class="safety-note">
+            Not a navigation tool. Use official charts, weather, and Coast Guard guidance on the water.
+          </p>
+        </section>
+
+        <!-- FEED -->
+        <section class="panel" id="panel-feed" data-panel="feed">
+          <div class="panel-head">
+            <h1>Lake feed</h1>
+            <p><span class="live-dot"></span> Fresh check-ins and posts for Lake St. Clair</p>
+          </div>
+          <div class="filter-row" id="feed-filters" aria-label="Feed vibe filters"></div>
+          <ul class="feed-list" id="feed-list" aria-live="polite"></ul>
+        </section>
+
+        <!-- DROP ANCHOR -->
+        <section class="panel" id="panel-anchor" data-panel="anchor">
+          <div class="panel-head">
+            <h1>Drop Anchor</h1>
+            <p>Temporary check-in. You control vibe, audience, precision, and duration.</p>
+          </div>
+
+          <form class="anchor-form" id="anchor-form">
+            <label for="anchor-place">Location</label>
+            <select id="anchor-place" required></select>
+
+            <fieldset>
+              <legend>Vibe</legend>
+              <div class="vibe-grid" id="anchor-vibes"></div>
+            </fieldset>
+
+            <label for="anchor-message">Message <span class="optional">(optional)</span></label>
+            <textarea
+              id="anchor-message"
+              maxlength="180"
+              placeholder="Calm water, good music, room to raft up…"
+            ></textarea>
+
+            <label for="anchor-audience">Audience</label>
+            <select id="anchor-audience">
+              <option value="public">Public</option>
+              <option value="followers">Followers</option>
+              <option value="friends">Friends</option>
+              <option value="crew">Crew</option>
+              <option value="private">Private</option>
+            </select>
+
+            <label for="anchor-precision">Precision</label>
+            <select id="anchor-precision">
+              <option value="place">Place-level only (recommended)</option>
+              <option value="approx">Approximate area</option>
+              <option value="exact-group">Exact within selected group</option>
+              <option value="hidden">Hidden from map</option>
+            </select>
+
+            <label for="anchor-duration">Duration</label>
+            <select id="anchor-duration">
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="120" selected>2 hours (default)</option>
+              <option value="240">4 hours</option>
+            </select>
+
+            <label class="check-row">
+              <input type="checkbox" id="anchor-to-feed" checked />
+              Also post to lake feed
+            </label>
+
+            <button class="btn btn-primary btn-block" type="submit">Drop Anchor</button>
+            <p class="form-hint">Check-ins expire automatically. End anytime from Profile.</p>
+          </form>
+        </section>
+
+        <!-- EVENTS -->
+        <section class="panel" id="panel-events" data-panel="events">
+          <div class="panel-head row-between">
+            <div>
+              <h1>Events</h1>
+              <p>Raft-ups, fishing meets, and family days on the lake.</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-new-event">Create</button>
+          </div>
+          <div class="event-filters">
+            <button type="button" class="chip is-active" data-event-filter="weekend">This weekend</button>
+            <button type="button" class="chip" data-event-filter="upcoming">Upcoming</button>
+            <button type="button" class="chip" data-event-filter="mine">My events</button>
+          </div>
+          <ul class="event-list" id="event-list"></ul>
+
+          <form class="event-create" id="event-create" hidden>
+            <h2>Create event</h2>
+            <label for="event-title">Title</label>
+            <input id="event-title" required placeholder="Sunset raft-up" />
+            <label for="event-place">Place</label>
+            <select id="event-place" required></select>
+            <label for="event-when">When</label>
+            <input id="event-when" type="datetime-local" required />
+            <label for="event-vibe">Category / vibe</label>
+            <select id="event-vibe"></select>
+            <button class="btn btn-primary" type="submit">Publish event</button>
+            <button class="btn btn-ghost" type="button" id="event-cancel">Cancel</button>
+          </form>
+        </section>
+
+        <!-- PROFILE -->
+        <section class="panel" id="panel-profile" data-panel="profile">
+          <div class="profile-header">
+            <div class="avatar lg" id="profile-avatar">You</div>
+            <div>
+              <h1 id="profile-name">You</h1>
+              <p class="username">@raftoff_you · Lake St. Clair</p>
+              <div class="interest-chips">
+                <span>Social boating</span>
+                <span>Fishing</span>
+                <span>Family</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="active-banner" id="active-banner" hidden>
+            <strong>You’re anchored</strong>
+            <span id="active-banner-text"></span>
+            <button type="button" class="btn btn-ghost btn-sm" id="end-checkin">End check-in</button>
+          </div>
+
+          <h2 class="subhead">Privacy defaults</h2>
+          <ul class="settings-list">
+            <li>
+              <span>Public map precision</span>
+              <strong>Place / zone</strong>
+            </li>
+            <li>
+              <span>Default audience</span>
+              <strong>Public</strong>
+            </li>
+            <li>
+              <span>Default duration</span>
+              <strong>2 hours</strong>
+            </li>
+            <li>
+              <span>Background tracking</span>
+              <strong>Off</strong>
+            </li>
+          </ul>
+
+          <h2 class="subhead">Your recent check-ins</h2>
+          <ul class="history-list" id="checkin-history"></ul>
+
+          <p class="safety-note">
+            RaftOff does not replace official charts, navigation equipment, weather services, or
+            Coast Guard guidance.
+          </p>
+          <a class="text-link" href="index.html">← Back to homepage</a>
+        </section>
+      </main>
+
+      <nav class="app-tabs" aria-label="Main">
+        <button type="button" class="tab is-active" data-tab="map">
+          <span class="tab-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
+          </span>Map
+        </button>
+        <button type="button" class="tab" data-tab="feed">
+          <span class="tab-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </span>Feed
+        </button>
+        <button type="button" class="tab tab-anchor" data-tab="anchor">
+          <span class="tab-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 4v12M8 8h8M7 20c2-3 4-4 5-4s3 1 5 4M12 16c0 0-3 1.5-4.5 4M12 16c0 0 3 1.5 4.5 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>Anchor
+        </button>
+        <button type="button" class="tab" data-tab="events">
+          <span class="tab-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </span>Events
+        </button>
+        <button type="button" class="tab" data-tab="profile">
+          <span class="tab-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="3.2" stroke="currentColor" stroke-width="1.8"/><path d="M5.5 19c1.4-3 3.7-4.5 6.5-4.5s5.1 1.5 6.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </span>Profile
+        </button>
+      </nav>
+    </div>
+
+    <div class="toast" id="toast" hidden></div>
+    <script src="js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+# Minimal Supabase project config for RaftOff Social
+project_id = "raftoff-social"
+
+[api]
+enabled = true
+port = 54321
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+
+[functions.expire-check-ins]
+verify_jwt = false
+
+[functions.location-feed]
+verify_jwt = false

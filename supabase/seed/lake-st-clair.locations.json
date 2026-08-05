@@ -1,0 +1,808 @@
+[
+  {
+    "slug": "strawberry-island",
+    "name": "Strawberry Island / Sandbar",
+    "type": "social_sandbar",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "gull-island",
+    "name": "Gull Island",
+    "type": "social_island",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "muscamoot-bay",
+    "name": "Muscamoot Bay",
+    "type": "social_bay",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "little-muscamoot-bay",
+    "name": "Little Muscamoot Bay",
+    "type": "social_bay",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "grassy-bends",
+    "name": "Grassy / Grassy Bends",
+    "type": "social_sandbar",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "jobbie-nooner-zone",
+    "name": "Jobbie Nooner Zone",
+    "type": "event_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "big-muscamoot-goose-bay",
+    "name": "Big Muscamoot / Goose Bay",
+    "type": "social_bay",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "metro-beach-offshore",
+    "name": "Metro Beach offshore anchoring",
+    "type": "social_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "new-baltimore-waterfront",
+    "name": "New Baltimore / Anchor Bay waterfront",
+    "type": "social_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "belle-river-anchoring",
+    "name": "Belle River / south-shore anchoring",
+    "type": "social_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "anchor-bay",
+    "name": "Anchor Bay",
+    "type": "region",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "main-lake",
+    "name": "Lake St. Clair Main Lake",
+    "type": "region",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "st-clair-flats",
+    "name": "St. Clair Flats",
+    "type": "region",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "harsens-island",
+    "name": "Harsens Island",
+    "type": "region",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "dickinson-island",
+    "name": "Dickinson Island",
+    "type": "region",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "walpole-island-area",
+    "name": "Walpole Island area",
+    "type": "region",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "north-channel",
+    "name": "North Channel",
+    "type": "channel",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "middle-channel",
+    "name": "Middle Channel",
+    "type": "channel",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "south-channel",
+    "name": "South Channel",
+    "type": "channel",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "chenal-ecarte",
+    "name": "Chenal Ecarte",
+    "type": "channel",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "clinton-river-mouth",
+    "name": "Clinton River Mouth",
+    "type": "channel_mouth",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "black-creek-metropark",
+    "name": "Black Creek / Metropark basin",
+    "type": "channel_mouth",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "detroit-river-entrance",
+    "name": "Detroit River entrance",
+    "type": "channel_mouth",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "lake-st-clair-metropark",
+    "name": "Lake St. Clair Metropark",
+    "type": "park",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "metropark-north-marina",
+    "name": "Metropark North Marina / boat basin",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "burke-park-new-baltimore",
+    "name": "Walter and Mary Burke Park",
+    "type": "park",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "brandenburg-park",
+    "name": "Brandenburg Park waterfront",
+    "type": "park",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "nautical-mile",
+    "name": "St. Clair Shores Nautical Mile",
+    "type": "waterfront_district",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "belle-isle-shoreline",
+    "name": "Belle Isle shoreline/launch area",
+    "type": "park",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "windsor-waterfront",
+    "name": "Windsor waterfront",
+    "type": "waterfront_district",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "selfridge-dnr",
+    "name": "Selfridge DNR Boating Access Site",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "harley-ensign-dnr",
+    "name": "Harley Ensign Memorial DNR Access",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "clinton-river-cutoff-dnr",
+    "name": "Clinton River Cut-Off DNR Access",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "metropark-boat-launch",
+    "name": "Lake St. Clair Metropark Boat Launch",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "algonac-dnr",
+    "name": "Algonac DNR / North Channel launch",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "fair-haven-dnr",
+    "name": "Fair Haven DNR Boating Access Site",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "scs-9-mile-ramp",
+    "name": "St. Clair Shores 9 Mile Boat Ramp",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "blossom-heath-ramp",
+    "name": "Blossom Heath Boat Ramp",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "lac-st-clair-ramp",
+    "name": "Lac St. Clair Boat Ramp",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "riverside-marina-launch",
+    "name": "Riverside Marina / Detroit River launch",
+    "type": "boat_launch",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "tashmoo-marina",
+    "name": "Tashmoo Marina",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "mayea-marina",
+    "name": "Mayea Marina",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "northpointe-shores-marina",
+    "name": "Northpointe Shores Marina",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "bouvier-bridge-marina",
+    "name": "Bouvier Bridge Marina / resort",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "belle-river-marina",
+    "name": "Belle River Marina",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "st-clair-boat-harbor",
+    "name": "St. Clair Boat Harbor",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "jefferson-beach-marina",
+    "name": "Jefferson Beach Marina",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "macray-harbor",
+    "name": "MacRay Harbor",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "belle-maer-harbor",
+    "name": "Belle Maer Harbor",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "hideaway-harbor",
+    "name": "Hideaway Harbor",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "michigan-harbor",
+    "name": "Michigan Harbor",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "markley-marine",
+    "name": "Markley Marine",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "keans-marina",
+    "name": "Kean's Marina",
+    "type": "marina",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "anchor-bay-fishing",
+    "name": "Anchor Bay fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "selfridge-mile-roads-fishing",
+    "name": "Selfridge / northern Mile Roads fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "metropark-huron-point-fishing",
+    "name": "Metropark / Huron Point fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "scs-mile-roads-fishing",
+    "name": "St. Clair Shores Mile Roads fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "grosse-pointe-fishing",
+    "name": "Grosse Pointe shoreline fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "flats-channel-fishing",
+    "name": "St. Clair Flats channel fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "belle-river-ontario-fishing",
+    "name": "Belle River / Ontario shore fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "thames-river-mouth-fishing",
+    "name": "Thames River mouth general fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  },
+  {
+    "slug": "detroit-river-mouth-fishing",
+    "name": "Detroit River mouth fishing zone",
+    "type": "fishing_zone",
+    "coordinates": null,
+    "boundaryGeoJson": null,
+    "verificationStatus": "needs_review",
+    "sourceUrl": null,
+    "attributes": {
+      "supportsCheckIn": true,
+      "supportsLocationFeed": true
+    }
+  }
+]

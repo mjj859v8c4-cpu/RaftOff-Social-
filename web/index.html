@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="RaftOff Social — Find Your Crew. Find Your Spot. Live lake maps, Drop Anchor check-ins, and the scene across Michigan’s hottest lakes."
+    />
+    <meta name="theme-color" content="#05040a" />
+    <meta property="og:title" content="RaftOff Social — Find Your Crew. Find Your Spot." />
+    <meta
+      property="og:description"
+      content="Live lake maps, check-ins, and waterfront energy across Michigan."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/hero-main.jpg" />
+    <title>RaftOff Social — Find Your Crew. Find Your Spot.</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="home">
+    <header class="site-header">
+      <a class="logo" href="index.html">RaftOff Social</a>
+      <nav class="nav">
+        <a class="nav-cta" href="app.html" data-track="web_cta" data-cta="header_open_app">Open free app</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-media" aria-hidden="true">
+          <img
+            class="hero-photo"
+            src="assets/hero-main.jpg"
+            alt=""
+            width="2200"
+            height="1467"
+            fetchpriority="high"
+          />
+          <div class="hero-veil"></div>
+          <div class="hero-grain"></div>
+          <div class="hero-shimmer"></div>
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Michigan lakes · live</p>
+          <p class="brand-mark">RaftOff Social</p>
+          <h1>Find Your Crew.<br />Find Your Spot.</h1>
+          <p class="lede">
+            See who’s out, where the vibe is hot, and pull up —
+            built for boat owners and everyone they want onboard.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="app.html" data-track="web_cta" data-cta="hero_open_app">Jump in free</a>
+            <a class="btn btn-ghost" href="#lakes" data-track="web_cta" data-cta="hero_lakes">Browse lakes</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="lakes-band" id="lakes" aria-label="Lakes on RaftOff Social">
+        <div class="lakes-track">
+          <span>St. Clair</span>
+          <span>Torch</span>
+          <span>Charlevoix</span>
+          <span>Traverse Bay</span>
+          <span>Higgins</span>
+          <span>Burt</span>
+          <span>Mullett</span>
+          <span>Walloon</span>
+          <span aria-hidden="true">St. Clair</span>
+          <span aria-hidden="true">Torch</span>
+          <span aria-hidden="true">Charlevoix</span>
+          <span aria-hidden="true">Traverse Bay</span>
+          <span aria-hidden="true">Higgins</span>
+          <span aria-hidden="true">Burt</span>
+          <span aria-hidden="true">Mullett</span>
+          <span aria-hidden="true">Walloon</span>
+        </div>
+      </section>
+
+      <section class="scene" id="scene">
+        <div class="scene-media" aria-hidden="true">
+          <img
+            src="assets/scene-boat.jpg"
+            alt=""
+            width="2200"
+            height="1467"
+            loading="lazy"
+          />
+          <div class="scene-veil"></div>
+        </div>
+        <div class="scene-copy">
+          <p class="section-kicker">On the water</p>
+          <h2>Find the raft-up.<br />Be the raft-up.</h2>
+          <p class="section-copy">
+            Live lake maps, Drop Anchor check-ins, waterfront spots, and weekend energy —
+            so the right boats and the right vibe find each other.
+          </p>
+        </div>
+      </section>
+
+      <section class="section section-cta">
+        <div class="cta-band">
+          <h2>Ready when you are.</h2>
+          <p class="section-copy">
+            Get early access or open the free app now. Lake St. Clair first — more Michigan lakes live.
+          </p>
+          <form class="waitlist" id="waitlist" data-track-form="waitlist">
+            <label class="sr-only" for="waitlist-email">Email</label>
+            <input
+              id="waitlist-email"
+              name="email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="Email for early access"
+            />
+            <button class="btn btn-primary" type="submit">Get early access</button>
+          </form>
+          <p class="form-note" id="waitlist-note" hidden>You’re on the list. We’ll hit you when it drops.</p>
+          <a class="text-link" href="app.html" data-track="web_cta" data-cta="footer_launch">Or open the free app now →</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© 2026 RaftOff Social · Not a navigation product</p>
+    </footer>
+    <script>
+      (function () {
+        var key = "raftoff-web-meta-v1";
+        function sid() {
+          try {
+            var s = sessionStorage.getItem("raftoff-sid");
+            if (s) return s;
+            s = "w_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+            sessionStorage.setItem("raftoff-sid", s);
+            return s;
+          } catch (e) {
+            return "w_anon";
+          }
+        }
+        function push(name, props) {
+          var row = {
+            name: name,
+            ts: new Date().toISOString(),
+            session_id: sid(),
+            platform: "web",
+            hour_bucket: new Date().getHours(),
+            dow: new Date().getDay(),
+            commercial_ok: true,
+            props: props || {},
+          };
+          try {
+            var q = JSON.parse(localStorage.getItem(key) || "[]");
+            q.push(row);
+            if (q.length > 200) q = q.slice(-200);
+            localStorage.setItem(key, JSON.stringify(q));
+          } catch (e) {}
+        }
+        push("app_open", { source: "marketing_site" });
+        document.addEventListener("click", function (e) {
+          var t = e.target && e.target.closest && e.target.closest("[data-track]");
+          if (!t) return;
+          push(t.getAttribute("data-track"), { cta: t.getAttribute("data-cta") || "" });
+        });
+        var form = document.getElementById("waitlist");
+        if (form) {
+          form.addEventListener("submit", function (e) {
+            e.preventDefault();
+            var email = (document.getElementById("waitlist-email") || {}).value || "";
+            if (!email) return;
+            push("web_cta", { cta: "waitlist_submit", email_domain: email.split("@")[1] || "" });
+            try {
+              var leads = JSON.parse(localStorage.getItem("raftoff-leads-v1") || "[]");
+              leads.push({ email: email, ts: new Date().toISOString(), source: "landing" });
+              localStorage.setItem("raftoff-leads-v1", JSON.stringify(leads));
+            } catch (err) {}
+            form.hidden = true;
+            var note = document.getElementById("waitlist-note");
+            if (note) note.hidden = false;
+          });
+        }
+      })();
+    </script>
+  </body>
+</html>

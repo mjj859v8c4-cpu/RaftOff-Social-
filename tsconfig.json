@@ -1,0 +1,13 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "@/*": ["./*"],
+      "@workspace/api-client-react": ["./packages/api-client-react/index.ts"],
+      "@expo/vector-icons": ["./node_modules/expo/node_modules/@expo/vector-icons"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "exclude": ["supabase/functions/**", "node_modules", "web"]
+}
