@@ -15,9 +15,18 @@ port = 54323
 
 [auth]
 enabled = true
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
 
 [functions.expire-check-ins]
+# Invoked by cron with service role; keep JWT off for scheduler or use a shared secret header.
 verify_jwt = false
 
 [functions.location-feed]
+verify_jwt = true
+
+[functions.waitlist]
 verify_jwt = false
