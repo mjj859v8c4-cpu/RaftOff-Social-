@@ -1,8 +1,8 @@
 import React, { useMemo } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, vibes } from "@/lib/theme";
 import { useRaftOffStore } from "@/features/map/store";
-import { getLakeById } from "@/supabase/seed/michigan-lakes";
 import { LakeSwitcher } from "@/components/map/LakeSwitcher";
 
 export default function FeedScreen() {
@@ -10,7 +10,8 @@ export default function FeedScreen() {
   const toggleLike = useRaftOffStore((s) => s.toggleLike);
   const activeLakeId = useRaftOffStore((s) => s.activeLakeId);
   const setActiveLakeId = useRaftOffStore((s) => s.setActiveLakeId);
-  const lake = getLakeById(activeLakeId);
+  const lakes = useRaftOffStore((s) => s.lakes);
+  const lakeName = lakes.find((l) => l.id === activeLakeId)?.name ?? "Lake";
 
   const lakePosts = useMemo(
     () =>
@@ -21,13 +22,13 @@ export default function FeedScreen() {
   );
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.switcher}>
+    <SafeAreaView style={styles.wrap} edges={["top"]}>
+        <View style={styles.switcher}>
         <LakeSwitcher value={activeLakeId} onChange={setActiveLakeId} />
       </View>
       <Text style={styles.sub}>
         <Text style={styles.dot}>● </Text>
-        Live feed · {lake.name}
+        Feed · {lakeName}
       </Text>
       <FlatList
         data={lakePosts}
@@ -46,7 +47,7 @@ export default function FeedScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.author}>{item.profile?.display_name ?? "Member"}</Text>
                   <Text style={styles.meta}>
-                    {item.location?.name ?? lake.name}
+                    {item.location?.name ?? lakeName}
                     {vibe ? ` · ${vibe.label}` : ""} · {formatAge(item.created_at)}
                     {item.check_in_id ? " · check-in" : ""}
                   </Text>
@@ -63,11 +64,11 @@ export default function FeedScreen() {
         }}
         ListEmptyComponent={
           <Text style={styles.empty}>
-            No posts on {lake.name} yet — Drop Anchor to start the feed.
+            No posts on {lakeName} yet — Drop Anchor to start the feed.
           </Text>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

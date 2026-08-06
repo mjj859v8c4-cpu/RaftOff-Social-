@@ -1,20 +1,22 @@
 import React from "react";
 import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { colors } from "@/lib/theme";
-import { MICHIGAN_LAKES } from "@/supabase/seed/michigan-lakes";
+import { useRaftOffStore } from "@/features/map/store";
+import { getLakeFrame } from "@/lib/geo/lakeFrames";
 
 type Props = {
-  value: string;
+  value: string | null;
   onChange: (id: string) => void;
 };
 
 export function LakeSwitcher({ value, onChange }: Props) {
-  const lakes = [...MICHIGAN_LAKES].sort((a, b) => b.popularity - a.popularity);
+  const lakes = useRaftOffStore((s) => s.lakes);
 
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       {lakes.map((lake) => {
         const active = value === lake.id;
+        const frame = getLakeFrame(lake.slug);
         return (
           <Pressable
             key={lake.id}
@@ -22,7 +24,7 @@ export function LakeSwitcher({ value, onChange }: Props) {
             style={[styles.chip, active && styles.chipActive]}
           >
             <Text style={[styles.name, active && styles.nameActive]}>{lake.name}</Text>
-            <Text style={[styles.region, active && styles.regionActive]}>{lake.region}</Text>
+            <Text style={[styles.region, active && styles.regionActive]}>{frame.region}</Text>
           </Pressable>
         );
       })}

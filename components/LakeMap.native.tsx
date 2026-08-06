@@ -1,6 +1,6 @@
 import { useListHotspots, useGetLakeSummary } from "@workspace/api-client-react";
 import { useRouter } from "expo-router";
-import React from "react";
+import React, { useMemo } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -12,9 +12,9 @@ import MapView, { Callout, Marker } from "react-native-maps";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
-import { LAKE_ST_CLAIR_REGION } from "@/supabase/seed/lake-st-clair-hotspots";
 import { useRaftOffStore } from "@/features/map/store";
-import { getLakeById, type MichiganLake } from "@/supabase/seed/michigan-lakes";
+import { getLakeFrame } from "@/lib/geo/lakeFrames";
+import { clusterMarkers } from "@/lib/map/cluster";
 
 const CROWD_COLORS: Record<string, string> = {
   Light: "#22C55E",
@@ -23,75 +23,91 @@ const CROWD_COLORS: Record<string, string> = {
   Packed: "#EF4444",
 };
 
-function regionForLake(lake: MichiganLake | undefined) {
-  if (!lake || lake.id === "lake-st-clair") return LAKE_ST_CLAIR_REGION;
-  const latitudeDelta = Math.max(
-    0.08,
-    (lake.bounds.ne.latitude - lake.bounds.sw.latitude) * 1.15,
-  );
-  const longitudeDelta = Math.max(
-    0.08,
-    (lake.bounds.ne.longitude - lake.bounds.sw.longitude) * 1.15,
-  );
-  return {
-    latitude: lake.center.latitude,
-    longitude: lake.center.longitude,
-    latitudeDelta,
-    longitudeDelta,
-  };
-}
-
 export function LakeMap() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const activeLakeId = useRaftOffStore((s) => s.activeLakeId);
-  const lake = getLakeById(activeLakeId);
+  const lakes = useRaftOffStore((s) => s.lakes);
+  const lakeRow = lakes.find((l) => l.id === activeLakeId);
+  const frame = getLakeFrame(lakeRow?.slug ?? "lake-st-clair");
   const { data: hotspots, isLoading } = useListHotspots();
   const { data: summary } = useGetLakeSummary();
-  const region = regionForLake(lake);
+
+  const region = {
+    latitude: frame.center.latitude,
+    longitude: frame.center.longitude,
+    latitudeDelta: Math.max(
+      0.08,
+      (frame.bounds.ne.latitude - frame.bounds.sw.latitude) * 1.15
+    ),
+    longitudeDelta: Math.max(
+      0.08,
+      (frame.bounds.ne.longitude - frame.bounds.sw.longitude) * 1.15
+    ),
+  };
+
+  const clustered = useMemo(() => {
+    const points = (hotspots ?? []).map((h) => ({
+      id: h.id,
+      lat: h.lat,
+      lng: h.lng,
+      meta: h as unknown as Record<string, unknown>,
+    }));
+    // Native MapView starts around lake frame zoom ~9–10
+    return clusterMarkers(points, frame.zoom);
+  }, [hotspots, frame.zoom]);
 
   return (
     <View style={styles.container}>
       <MapView
-        key={activeLakeId}
+        key={activeLakeId ?? "lake"}
         style={styles.map}
         initialRegion={region}
         showsUserLocation
         showsMyLocationButton={false}
         mapType="hybrid"
       >
-        {hotspots?.map((spot) => {
-          const pinColor = CROWD_COLORS[spot.crowdLevel] ?? colors.primary;
+        {clustered.map((item) => {
+          if (item.type === "cluster") {
+            return (
+              <Marker
+                key={item.id}
+                coordinate={{ latitude: item.lat, longitude: item.lng }}
+              >
+                <View style={[styles.cluster, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.clusterText}>{item.count}</Text>
+                </View>
+              </Marker>
+            );
+          }
+          const spot = item.meta as {
+            crowdLevel?: string;
+            name?: string;
+            boatCount?: number;
+          };
+          const pinColor = CROWD_COLORS[spot.crowdLevel ?? ""] ?? colors.primary;
           return (
             <Marker
-              key={spot.id}
-              coordinate={{ latitude: spot.lat, longitude: spot.lng }}
-              onCalloutPress={() => router.push(`/locations/loc-${spot.id}`)}
+              key={item.id}
+              coordinate={{ latitude: item.lat, longitude: item.lng }}
+              onCalloutPress={() => router.push(`/locations/${item.id}`)}
             >
               <View style={[styles.pin, { backgroundColor: pinColor }]}>
                 <Feather name="anchor" size={11} color="#fff" />
               </View>
-              <Callout tooltip onPress={() => router.push(`/locations/loc-${spot.id}`)}>
+              <Callout tooltip onPress={() => router.push(`/locations/${item.id}`)}>
                 <View
                   style={[
                     styles.callout,
                     { backgroundColor: colors.card, borderColor: colors.border },
                   ]}
                 >
-                  <Text style={[styles.calloutName, { color: colors.foreground }]}>
+                  <Text style={[styles.calloutTitle, { color: colors.foreground }]}>
                     {spot.name}
                   </Text>
-                  <Text style={[styles.calloutSub, { color: colors.mutedForeground }]}>
-                    {spot.boatCount} boats · {spot.crowdLevel}
-                  </Text>
-                  {spot.topVibe ? (
-                    <Text style={[styles.calloutVibe, { color: colors.secondary }]}>
-                      {spot.topVibe}
-                    </Text>
-                  ) : null}
-                  <Text style={[styles.calloutLink, { color: colors.primary }]}>
-                    View details
+                  <Text style={{ color: colors.mutedForeground, fontSize: 12 }}>
+                    {spot.boatCount ?? 0} boats · {spot.crowdLevel}
                   </Text>
                 </View>
               </Callout>
@@ -100,84 +116,35 @@ export function LakeMap() {
         })}
       </MapView>
 
-      {summary ? (
-        <View
-          style={[
-            styles.overlay,
-            {
-              // LakeSwitcher + safe area live above this component on the Map tab.
-              top: 12,
-              backgroundColor: colors.card + "F2",
-              borderColor: colors.border,
-            },
-          ]}
-        >
-          <Text style={[styles.lakeTitle, { color: colors.foreground }]}>
-            {lake?.name ?? "Lake St. Clair"}
-          </Text>
-          <View style={styles.statsRow}>
-            <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.primary }]}>
-                {summary.totalBoats}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                boats out
-              </Text>
-            </View>
-            <View style={[styles.divider, { backgroundColor: colors.border }]} />
-            <View style={styles.stat}>
-              <Text style={[styles.statNum, { color: colors.primary }]}>
-                {summary.activeHotspots}
-              </Text>
-              <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                hotspots
-              </Text>
-            </View>
-            {summary.topHotspot ? (
-              <>
-                <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                <View style={[styles.stat, { flex: 2 }]}>
-                  <Text
-                    style={[styles.statNum, { color: colors.secondary, fontSize: 14 }]}
-                    numberOfLines={1}
-                  >
-                    {summary.topHotspot}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>
-                    top spot
-                  </Text>
-                </View>
-              </>
-            ) : null}
-          </View>
-        </View>
-      ) : null}
+      <View style={[styles.hud, { top: insets.top + 8 }]}>
+        <Text style={styles.hudTitle}>{lakeRow?.name ?? frame.name}</Text>
+        <Text style={styles.hudSub}>
+          {summary
+            ? `${summary.totalBoats} active · ${summary.activeHotspots} hotspots`
+            : "Live lake map"}
+          {summary?.topHotspot ? ` · Hot: ${summary.topHotspot}` : ""}
+        </Text>
+      </View>
 
       {isLoading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={styles.loading}>
+          <ActivityIndicator color="#fff" />
         </View>
       ) : null}
 
       <TouchableOpacity
-        style={[
-          styles.fab,
-          {
-            bottom: insets.bottom + 78,
-            backgroundColor: colors.primary,
-          },
-        ]}
+        style={[styles.fab, { bottom: insets.bottom + 24 }]}
         onPress={() => router.push("/(tabs)/drop-anchor")}
-        activeOpacity={0.85}
       >
-        <Feather name="anchor" size={20} color="#fff" />
+        <Feather name="anchor" size={18} color="#fff" />
+        <Text style={styles.fabText}>Drop Anchor</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: "#050A0F" },
   map: { flex: 1 },
   pin: {
     width: 28,
@@ -187,64 +154,53 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 2,
     borderColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 4,
   },
+  cluster: {
+    minWidth: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
+    paddingHorizontal: 8,
+  },
+  clusterText: { color: "#fff", fontWeight: "800" },
   callout: {
+    padding: 10,
     borderRadius: 12,
-    padding: 12,
-    minWidth: 155,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 6,
+    minWidth: 140,
   },
-  calloutName: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
-  calloutSub: { fontSize: 12, fontWeight: "400", marginBottom: 3 },
-  calloutVibe: { fontSize: 11, fontWeight: "600", marginBottom: 4 },
-  calloutLink: { fontSize: 12, fontWeight: "500" },
-  overlay: {
+  calloutTitle: { fontWeight: "800", marginBottom: 2 },
+  hud: {
     position: "absolute",
     left: 12,
     right: 12,
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: "rgba(5,12,18,0.72)",
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
+    borderColor: "rgba(255,255,255,0.14)",
   },
-  lakeTitle: { fontSize: 17, fontWeight: "700", marginBottom: 8 },
-  statsRow: { flexDirection: "row", alignItems: "center" },
-  stat: { flex: 1, alignItems: "center" },
-  statNum: { fontSize: 20, fontWeight: "700", lineHeight: 24 },
-  statLabel: { fontSize: 11, fontWeight: "400", marginTop: 1 },
-  divider: { width: 1, height: 28, marginHorizontal: 8 },
-  loader: {
+  hudTitle: { color: "#F4FBFF", fontWeight: "800", fontSize: 16 },
+  hudSub: { color: "rgba(244,251,255,0.8)", marginTop: 2, fontSize: 12 },
+  loading: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.25)",
   },
   fab: {
     position: "absolute",
-    right: 20,
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    right: 16,
+    flexDirection: "row",
+    gap: 8,
     alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
+    backgroundColor: "#FF3D82",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 999,
   },
+  fabText: { color: "#fff", fontWeight: "800" },
 });

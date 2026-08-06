@@ -7,10 +7,33 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing, vibes } from "@/lib/theme";
 import { useRaftOffStore } from "@/features/map/store";
-import { getLakeById } from "@/supabase/seed/michigan-lakes";
 import { LakeSwitcher } from "@/components/map/LakeSwitcher";
+
+const START_PRESETS = [
+  { id: "tonight", label: "Tonight 6pm", offsetMs: () => {
+    const d = new Date();
+    d.setHours(18, 0, 0, 0);
+    if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+    return d.getTime() - Date.now();
+  }},
+  { id: "tomorrow", label: "Tomorrow 11am", offsetMs: () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(11, 0, 0, 0);
+    return d.getTime() - Date.now();
+  }},
+  { id: "weekend", label: "Sat 1pm", offsetMs: () => {
+    const d = new Date();
+    const day = d.getDay();
+    const add = day === 6 ? 7 : (6 - day + 7) % 7 || 7;
+    d.setDate(d.getDate() + add);
+    d.setHours(13, 0, 0, 0);
+    return d.getTime() - Date.now();
+  }},
+] as const;
 
 export default function EventsScreen() {
   const events = useRaftOffStore((s) => s.events);
@@ -19,7 +42,8 @@ export default function EventsScreen() {
   const setActiveLakeId = useRaftOffStore((s) => s.setActiveLakeId);
   const rsvpEvent = useRaftOffStore((s) => s.rsvpEvent);
   const createEvent = useRaftOffStore((s) => s.createEvent);
-  const lake = getLakeById(activeLakeId);
+  const lakes = useRaftOffStore((s) => s.lakes);
+  const lakeName = lakes.find((l) => l.id === activeLakeId)?.name ?? "Lake";
   const locations = locationsForActiveLake();
 
   const lakeEvents = useMemo(
@@ -31,14 +55,15 @@ export default function EventsScreen() {
   const [title, setTitle] = useState("");
   const [locationId, setLocationId] = useState(locations[0]?.id ?? "");
   const [category, setCategory] = useState("party");
+  const [whenId, setWhenId] = useState<(typeof START_PRESETS)[number]["id"]>("tomorrow");
 
   return (
-    <View style={styles.wrap}>
-      <View style={styles.switcher}>
+    <SafeAreaView style={styles.wrap} edges={["top"]}>
+        <View style={styles.switcher}>
         <LakeSwitcher value={activeLakeId} onChange={setActiveLakeId} />
       </View>
       <View style={styles.header}>
-        <Text style={styles.sub}>Events on {lake.name}</Text>
+        <Text style={styles.sub}>Events on {lakeName}</Text>
         <Pressable style={styles.ghost} onPress={() => setCreating((v) => !v)}>
           <Text style={styles.ghostText}>{creating ? "Close" : "Create"}</Text>
         </Pressable>
@@ -63,16 +88,22 @@ export default function EventsScreen() {
             value={category}
             onChange={setCategory}
           />
+          <ScrollChips
+            items={START_PRESETS.map((p) => ({ id: p.id, label: p.label }))}
+            value={whenId}
+            onChange={(id) => setWhenId(id as typeof whenId)}
+          />
           <Pressable
             style={styles.primary}
             onPress={() => {
               const loc = locationId || locations[0]?.id;
               if (!title.trim() || !loc) return;
+              const preset = START_PRESETS.find((p) => p.id === whenId) ?? START_PRESETS[1];
               createEvent({
                 title: title.trim(),
                 locationId: loc,
                 category,
-                startsAt: new Date(Date.now() + 86400000).toISOString(),
+                startsAt: new Date(Date.now() + preset.offsetMs()).toISOString(),
               });
               setTitle("");
               setCreating(false);
@@ -88,7 +119,7 @@ export default function EventsScreen() {
         keyExtractor={(e) => e.id}
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: 40 }}
         ListEmptyComponent={
-          <Text style={styles.empty}>No events on {lake.name} yet — create the first one.</Text>
+          <Text style={styles.empty}>No events on {lakeName} yet — create the first one.</Text>
         }
         renderItem={({ item }) => (
           <View style={styles.card}>
@@ -99,7 +130,7 @@ export default function EventsScreen() {
             </Text>
             <Pressable
               style={[styles.primary, item.going && styles.ghost]}
-              onPress={() => rsvpEvent(item.id)}
+              onPress={() => rsvpEvent(item.id, !item.going)}
             >
               <Text style={[styles.primaryText, item.going && styles.ghostText]}>
                 {item.going ? "Going ✓" : "RSVP Going"}
@@ -108,7 +139,7 @@ export default function EventsScreen() {
           </View>
         )}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -3,8 +3,9 @@ import { StyleSheet, View } from "react-native";
 import { WebView } from "react-native-webview";
 import { buildMapHtml, getMapboxToken, type MapMarker } from "@/lib/mapbox/mapHtml";
 import { pinColorForType, shouldShowAsPin } from "@/features/map/markers";
-import { getLakeById } from "@/supabase/seed/michigan-lakes";
+import { getLakeFrame } from "@/lib/geo/lakeFrames";
 import type { Location } from "@/types/raftoff";
+import { useRaftOffStore } from "@/features/map/store";
 
 type Props = {
   lakeId: string;
@@ -33,7 +34,9 @@ export function LakeMapView({
   onSelect,
   onMapPress,
 }: Props) {
-  const lake = getLakeById(lakeId);
+  const lakes = useRaftOffStore((s) => s.lakes);
+  const lakeRow = lakes.find((l) => l.id === lakeId);
+  const lake = getLakeFrame(lakeRow?.slug ?? "lake-st-clair");
 
   const html = useMemo(() => {
     const markers: MapMarker[] = locations
@@ -77,11 +80,11 @@ export function LakeMapView({
       token: getMapboxToken(),
       center: lake.center,
       zoom: lake.zoom,
-      lakeName: lake.name,
+      lakeName: lakeRow?.name ?? lake.name,
       markers,
       bounds: lake.bounds,
     });
-  }, [lake, locations, selectedId, vibeFilter]);
+  }, [lake, lakeRow?.name, locations, selectedId, vibeFilter]);
 
   return (
     <View style={styles.wrap}>

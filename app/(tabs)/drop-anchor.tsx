@@ -8,12 +8,13 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { colors, spacing, vibes, type VibeId } from "@/lib/theme";
 import { useRaftOffStore } from "@/features/map/store";
 import { dropAnchorSchema } from "@/lib/validation";
 import type { Audience, Precision } from "@/types/raftoff";
-import { getLakeById } from "@/supabase/seed/michigan-lakes";
+import { requestForegroundLocation } from "@/lib/permissions/location";
 
 const AUDIENCES: Audience[] = ["public", "followers", "friends", "crew", "private"];
 const PRECISIONS: { id: Precision; label: string }[] = [
@@ -38,7 +39,8 @@ export default function DropAnchorScreen() {
   const checkIns = useRaftOffStore((s) => s.checkIns);
   const endCheckIn = useRaftOffStore((s) => s.endCheckIn);
   const extendCheckIn = useRaftOffStore((s) => s.extendCheckIn);
-  const lake = getLakeById(activeLakeId);
+  const lakes = useRaftOffStore((s) => s.lakes);
+  const lakeName = lakes.find((l) => l.id === activeLakeId)?.name ?? "Lake";
 
   const checkInCapable = useMemo(
     () =>
@@ -64,9 +66,14 @@ export default function DropAnchorScreen() {
     if (params.locationId) setLocationId(params.locationId);
   }, [params.locationId]);
 
+  useEffect(() => {
+    // Soft ask once on Drop Anchor — location helps nearby suggestions later; not required to check in.
+    void requestForegroundLocation();
+  }, []);
+
   const activeMine = checkIns.find((c) => c.id === activeMineId && c.status === "active");
 
-  const onSubmit = () => {
+    const onSubmit = async () => {
     const parsed = dropAnchorSchema.safeParse({
       locationId,
       vibe,
@@ -80,16 +87,21 @@ export default function DropAnchorScreen() {
       Alert.alert("Check your Anchor", parsed.error.errors[0]?.message ?? "Invalid form");
       return;
     }
-    dropAnchor(parsed.data);
-    Alert.alert("You’re anchored", "Presence will expire automatically.", [
-      { text: "View map", onPress: () => router.push("/(tabs)/map") },
-    ]);
+    try {
+      await dropAnchor(parsed.data);
+      Alert.alert("You’re anchored", "Presence will expire automatically.", [
+        { text: "View map", onPress: () => router.push("/(tabs)/map") },
+      ]);
+    } catch (e) {
+      Alert.alert("Could not Drop Anchor", e instanceof Error ? e.message : "Try again");
+    }
   };
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.wrap} edges={["top"]}>
+    <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.lead}>
-        Temporary check-in on {lake.name}. You control vibe, audience, precision, and duration.
+        Temporary check-in on {lakeName}. You control vibe, audience, precision, and duration.
       </Text>
 
       {activeMine ? (
@@ -195,9 +207,10 @@ export default function DropAnchorScreen() {
         <Text style={styles.primaryText}>Drop Anchor</Text>
       </Pressable>
       <Text style={styles.hint}>
-        Check-ins expire automatically on the server schedule. Exact fishing GPS is never public.
+        Check-ins expire automatically. Exact fishing GPS is never public.
       </Text>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

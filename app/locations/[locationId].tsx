@@ -11,10 +11,7 @@ export default function LocationFeedScreen() {
   const getLocationFeed = useRaftOffStore((s) => s.getLocationFeed);
   const [tab, setTab] = useState<(typeof TABS)[number]>("live");
 
-  const feed = useMemo(
-    () => getLocationFeed(locationId, tab),
-    [getLocationFeed, locationId, tab]
-  );
+  const feed = useMemo(() => getLocationFeed(locationId), [getLocationFeed, locationId]);
   const location = feed.location;
 
   if (!location) {

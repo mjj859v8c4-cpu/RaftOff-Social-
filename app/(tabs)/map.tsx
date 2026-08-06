@@ -7,6 +7,7 @@ import { DiningStrip } from "@/components/map/DiningStrip";
 import { LakeSwitcher } from "@/components/map/LakeSwitcher";
 import { useRaftOffStore } from "@/features/map/store";
 import { colors, spacing } from "@/lib/theme";
+import { LoadingState } from "@/components/ui/States";
 
 export default function MapScreen() {
   const router = useRouter();
@@ -14,6 +15,11 @@ export default function MapScreen() {
   const setActiveLakeId = useRaftOffStore((s) => s.setActiveLakeId);
   const diningNearWater = useRaftOffStore((s) => s.diningForActiveLake());
   const selectLocation = useRaftOffStore((s) => s.selectLocation);
+  const status = useRaftOffStore((s) => s.status);
+
+  if (status === "loading" && !activeLakeId) {
+    return <LoadingState label="Loading lakes…" />;
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>

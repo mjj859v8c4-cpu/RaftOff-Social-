@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing } from "@/lib/theme";
 import { useRaftOffStore } from "@/features/map/store";
-import { getLakeById } from "@/supabase/seed/michigan-lakes";
+import { useAuthStore } from "@/features/auth/store";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { isMapboxConfigured } from "@/lib/mapbox/mapHtml";
+import { router } from "expo-router";
 import {
   exportCommercialInsightsJson,
   getAudienceProfile,
@@ -21,8 +23,13 @@ export default function ProfileScreen() {
   const checkIns = useRaftOffStore((s) => s.checkIns);
   const endCheckIn = useRaftOffStore((s) => s.endCheckIn);
   const activeLakeId = useRaftOffStore((s) => s.activeLakeId);
-  const lake = getLakeById(activeLakeId);
-  const mine = checkIns.filter((c) => c.user_id === "demo-user");
+  const lakes = useRaftOffStore((s) => s.lakes);
+  const lakeName = lakes.find((l) => l.id === activeLakeId)?.name ?? "Lake";
+  const authProfile = useAuthStore((s) => s.profile);
+  const session = useAuthStore((s) => s.session);
+  const signOut = useAuthStore((s) => s.signOut);
+  const userId = session?.user?.id;
+  const mine = checkIns.filter((c) => c.user_id === userId);
   const active = checkIns.find((c) => c.id === activeMineId && c.status === "active");
 
   const [profile, setProfile] = useState<AudienceProfile>({ commercialOk: true });
@@ -46,14 +53,17 @@ export default function ProfileScreen() {
   };
 
   return (
-    <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
+    <SafeAreaView style={styles.wrap} edges={["top"]}>
+    <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>YO</Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.name}>You</Text>
-          <Text style={styles.user}>@raftoff_you · {lake.name}</Text>
+          <Text style={styles.name}>{authProfile?.display_name ?? "You"}</Text>
+          <Text style={styles.user}>
+            @{authProfile?.username ?? "boater"} · {lakeName}
+          </Text>
           <View style={styles.chips}>
             <Text style={styles.chip}>Sandbar</Text>
             <Text style={styles.chip}>Raft-ups</Text>
@@ -183,6 +193,26 @@ export default function ProfileScreen() {
       <Row label="Default duration" value="2 hours" />
       <Row label="Background tracking" value="Off" />
 
+      <Text style={styles.section}>Legal & safety</Text>
+      <Pressable style={styles.ghost} onPress={() => router.push("/admin" as never)}>
+        <Text style={styles.ghostText}>
+          {authProfile?.role === "admin" || authProfile?.role === "moderator"
+            ? "Open admin / moderation"
+            : "Moderation tools (admins)"}
+        </Text>
+      </Pressable>
+      <Text style={styles.hint}>
+        Privacy Policy, Terms, and Community Guidelines are published at raftoff.social/privacy,
+        /terms, and /guidelines.
+      </Text>
+
+      <Pressable
+        style={[styles.ghost, { marginTop: 12 }]}
+        onPress={() => void signOut().then(() => router.replace("/(auth)/login" as never))}
+      >
+        <Text style={styles.ghostText}>Sign out</Text>
+      </Pressable>
+
       <Text style={styles.section}>Insights & sponsors</Text>
       <Text style={styles.hint}>
         We capture place-level activity (not your exact GPS) to sell lake insights to marinas and
@@ -240,6 +270,7 @@ export default function ProfileScreen() {
         Guard guidance. Exact fishing GPS is never sold.
       </Text>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
