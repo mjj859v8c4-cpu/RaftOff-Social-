@@ -1,45 +1,28 @@
-# RaftOff Social
+# RaftOff Social — Production
 
-**Find your crew. Find your spot.**
+Expo + Supabase location social app for Michigan lakes (Lake St. Clair first).
 
-Location-aware social app for Michigan lakes — bird’s-eye aerial maps, Drop Anchor check-ins, live feeds, events, and waterfront bars & restaurants.
+## Quick start
 
-## What’s included
+1. Copy `.env.example` → `.env.local` and fill Supabase + Mapbox public keys
+2. Apply migrations: `supabase db push` (or SQL editor)
+3. Enable Auth providers (Email, Google, Apple) in Supabase
+4. Deploy Edge Functions: `expire-check-ins`, `location-feed`, `waitlist`
+5. `npm install && npx expo start`
 
-- **Expo app** (Map · Feed · Drop Anchor · Events · Profile)
-- **12 popular Michigan lakes** with lake switcher
-- **Bird’s-eye aerial imagery** (Esri World Imagery; Mapbox satellite if token set)
-- **Bars & restaurants** strip + dining map filter
-- **Lake St. Clair launch registry** + expanded places (coordinates reviewed as `needs_review`)
-- **Supabase migrations**, Edge Functions stubs, seed data
-- **Static marketing site** in `web/` (Netlify-ready)
+## Production checklist
 
-## Run the app
+See [`docs/PRODUCTION_CHECKLIST.md`](docs/PRODUCTION_CHECKLIST.md) and [`docs/MONITORING.md`](docs/MONITORING.md).
 
-```bash
-export PATH="$HOME/.local/node/bin:$PATH"   # if using portable Node
-cd ~/Projects/raftoff-social
-cp -n .env.example .env.local
-npm install
-npx expo start
-```
+## Deploy
 
-Optional in `.env.local`:
+- **Marketing site:** Netlify publish `web/` (see `web/netlify.toml`)
+- **Mobile:** EAS Build with `EXPO_PUBLIC_*` secrets
+- **Never** put `SUPABASE_SERVICE_ROLE_KEY` in client env
 
-- `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`
-- `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` (`pk.…`) — upgrades aerial to Mapbox satellite-streets
+## Architecture
 
-Without keys, the app runs in **local demo mode** with aerial tiles + seeded activity.
-
-## Deploy marketing site
-
-Deploy the `web/` folder to Netlify (or similar), then point your GoDaddy domain at it.
-
-## Safety
-
-RaftOff is **not** a navigation product. No public exact fishing GPS. Dining pins are approximate waterfront businesses pending verification.
-
-## Docs
-
-- Product PRD / deployment PDF in repo root
-- Core loop: Map → pin → location feed → Drop Anchor → realtime update
+- Auth, profiles, boats, check-ins, posts, comments, likes, follows, notifications, reports, blocks → Supabase
+- Storage buckets: profile / boat / check-in / event photos
+- RLS on all tables; rate limits via `check_rate_limit`
+- Map: Mapbox satellite when token present, else Esri aerial + marker clustering
