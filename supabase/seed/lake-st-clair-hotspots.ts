@@ -26,10 +26,10 @@ export type Hotspot = {
 };
 
 export const LAKE_ST_CLAIR_REGION = {
-  latitude: 42.45,
-  longitude: -82.68,
-  latitudeDelta: 0.35,
-  longitudeDelta: 0.35,
+  latitude: 42.505,
+  longitude: -82.7,
+  latitudeDelta: 0.4,
+  longitudeDelta: 0.58,
 };
 
 const BASE: Array<{

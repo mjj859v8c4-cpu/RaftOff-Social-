@@ -70,10 +70,10 @@ export const vibes = [
 export type VibeId = (typeof vibes)[number]["id"];
 
 export const lakeStClairBounds = {
-  ne: { latitude: 42.72, longitude: -82.35 },
-  sw: { latitude: 42.28, longitude: -83.05 },
-  center: { latitude: 42.48, longitude: -82.7 },
-  zoom: 9.2,
+  ne: { latitude: 42.705, longitude: -82.42 },
+  sw: { latitude: 42.33, longitude: -82.98 },
+  center: { latitude: 42.505, longitude: -82.7 },
+  zoom: 9.7,
 } as const;
 
 /** Brand voice for young sandbar / boat-owner social */
