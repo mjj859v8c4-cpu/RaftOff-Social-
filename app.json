@@ -26,23 +26,34 @@
         "backgroundColor": "#050A0F"
       },
       "package": "com.raftoff.social",
-      "permissions": ["ACCESS_COARSE_LOCATION", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
+      "output": "single",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "react-native-maps",
+      "expo-apple-authentication",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow RaftOff to upload profile, boat, and check-in photos."
+        }
+      ],
       [
         "expo-location",
         {
           "locationWhenInUsePermission": "Allow RaftOff to use your location while using the app to Drop Anchor near Lake St. Clair places."
         }
-      ]
+      ],
+      "expo-font",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true

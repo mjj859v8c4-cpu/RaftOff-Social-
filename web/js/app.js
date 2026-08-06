@@ -1,10 +1,10 @@
 (function () {
   "use strict";
 
-  var CHECKIN_KEY = "raftoff-checkins-v2";
-  var FEED_KEY = "raftoff-feed-v2";
-  var EVENT_KEY = "raftoff-events-v2";
-  var ACTIVE_KEY = "raftoff-active-checkin-v2";
+  var CHECKIN_KEY = "raftoff-checkins-v3";
+  var FEED_KEY = "raftoff-feed-v3";
+  var EVENT_KEY = "raftoff-events-v3";
+  var ACTIVE_KEY = "raftoff-active-checkin-v3";
 
   var VIBES = [
     { id: "party", label: "Party", color: "#ff6b8a" },
@@ -15,19 +15,57 @@
     { id: "food", label: "Food", color: "#e8c36a" },
   ];
 
+  /** Corey's verified Lake St. Clair hotspots (USGS / NOAA Chart 14850/14852) */
   var PLACES = [
-    { id: "sandbar-east", name: "Sandbar East", x: 560, y: 250, type: "sandbar" },
-    { id: "metro-beach", name: "Metro Beach", x: 250, y: 420, type: "beach" },
-    { id: "north-channel", name: "North Channel", x: 420, y: 180, type: "channel" },
-    { id: "st-clair-flats", name: "St. Clair Flats", x: 620, y: 400, type: "fishing" },
-    { id: "jefferson-marina", name: "Jefferson Marina", x: 180, y: 300, type: "marina" },
+    { id: "strawberry-island", name: "Strawberry Island", lat: 42.5981, lng: -82.7094, type: "sandbar" },
+    { id: "gull-island", name: "Gull Island", lat: 42.5303, lng: -82.6821, type: "sandbar" },
+    { id: "jobbie-nooner-area", name: "Jobbie Nooner Area", lat: 42.538, lng: -82.6766, type: "sandbar" },
+    { id: "grassy-island", name: "Grassy Island", lat: 42.6044, lng: -82.6583, type: "sandbar" },
+    { id: "anchor-bay", name: "Anchor Bay", lat: 42.65, lng: -82.7166, type: "anchorage" },
+    { id: "big-muscamoot-bay", name: "Big Muscamoot Bay", lat: 42.5578, lng: -82.6607, type: "anchorage" },
+    { id: "little-muscamoot-bay", name: "Little Muscamoot Bay", lat: 42.5781, lng: -82.626, type: "anchorage" },
+    { id: "goose-bay", name: "Goose Bay", lat: 42.5845, lng: -82.6791, type: "anchorage" },
+    { id: "fisher-bay", name: "Fisher Bay", lat: 42.6067, lng: -82.651, type: "anchorage" },
+    { id: "metro-beach", name: "Metro Beach", lat: 42.5819, lng: -82.8098, type: "beach" },
+    { id: "harsens-island", name: "Harsens Island", lat: 42.5895, lng: -82.5885, type: "beach" },
+    { id: "grosse-pointe-shoreline", name: "Grosse Pointe Shoreline", lat: 42.3967, lng: -82.8885, type: "beach" },
+    { id: "st-clair-shores-marina", name: "St. Clair Shores Marina", lat: 42.493, lng: -82.887, type: "marina" },
+    { id: "jefferson-beach-marina", name: "Jefferson Beach Marina", lat: 42.4723, lng: -82.8885, type: "marina" },
+    { id: "emerald-city-harbor", name: "Emerald City Harbor", lat: 42.4683, lng: -82.8839, type: "marina" },
+    { id: "macray-harbor", name: "MacRay Harbor", lat: 42.568, lng: -82.832, type: "marina" },
+    { id: "belle-maer-harbor", name: "Belle Maer Harbor", lat: 42.6145, lng: -82.7865, type: "marina" },
+    { id: "harley-ensign-memorial", name: "Harley Ensign Memorial", lat: 42.5933, lng: -82.7747, type: "launch" },
+    { id: "selfridge-area", name: "Selfridge Area", lat: 42.605, lng: -82.8347, type: "launch" },
+    { id: "fair-haven", name: "Fair Haven", lat: 42.6792, lng: -82.65, type: "launch" },
+    { id: "st-clair-flats", name: "St. Clair Flats", lat: 42.5959, lng: -82.6327, type: "flats" },
+    { id: "north-channel", name: "North Channel", lat: 42.6102, lng: -82.6075, type: "channel" },
+    { id: "middle-channel", name: "Middle Channel", lat: 42.5795, lng: -82.5675, type: "channel" },
+    { id: "south-channel", name: "South Channel", lat: 42.5334, lng: -82.6707, type: "channel" },
+    { id: "st-clair-river-entrance", name: "St. Clair River Entrance", lat: 42.618, lng: -82.6, type: "channel" },
+    { id: "detroit-river-entrance", name: "Detroit River Entrance", lat: 42.372, lng: -82.918, type: "channel" },
   ];
+
+  var LAKE_FRAME = {
+    center: [-82.7, 42.505],
+    sw: [-82.98, 42.33],
+    ne: [-82.42, 42.705],
+  };
+
+  var TYPE_COLORS = {
+    sandbar: "#FF3D82",
+    anchorage: "#2EF2C8",
+    beach: "#5ec8ff",
+    marina: "#f5a623",
+    launch: "#e8c36a",
+    flats: "#56c7b0",
+    channel: "#a78bfa",
+  };
 
   var seedCheckins = [
     {
       id: "c1",
       author: "Maya",
-      placeId: "sandbar-east",
+      placeId: "strawberry-island",
       vibe: "party",
       message: "Raft-up growing — good music, friendly crews.",
       audience: "public",
@@ -63,7 +101,7 @@
     {
       id: "c4",
       author: "Alex",
-      placeId: "north-channel",
+      placeId: "gull-island",
       vibe: "chill",
       message: "Quiet afternoon float. Room to hang.",
       audience: "public",
@@ -75,7 +113,7 @@
     {
       id: "c5",
       author: "Riley",
-      placeId: "jefferson-marina",
+      placeId: "jefferson-beach-marina",
       vibe: "food",
       message: "Dockside bites before we head out.",
       audience: "followers",
@@ -90,7 +128,7 @@
     {
       id: "e1",
       title: "Saturday sandbar raft-up",
-      placeId: "sandbar-east",
+      placeId: "strawberry-island",
       vibe: "party",
       when: Date.now() + 2 * 24 * 3600000,
       rsvps: 28,
@@ -256,6 +294,11 @@
       panel.classList.toggle("is-active", panel.getAttribute("data-panel") === name);
     });
     if (history.replaceState) history.replaceState(null, "", "#" + name);
+    if (name === "map" && window.__raftoffMap) {
+      requestAnimationFrame(function () {
+        window.__raftoffMap.resize();
+      });
+    }
   }
 
   document.querySelectorAll("[data-tab]").forEach(function (tab) {
@@ -345,74 +388,44 @@
     }).join("");
   }
 
-  /* map */
-  function renderPlaces() {
-    var layer = $("place-layer");
-    if (!layer) return;
-    layer.innerHTML = PLACES.map(function (p) {
-      return (
-        '<g class="place-mark" data-place="' +
-        p.id +
-        '" style="cursor:pointer">' +
-        '<circle cx="' +
-        p.x +
-        '" cy="' +
-        p.y +
-        '" r="5" fill="rgba(232,244,251,0.55)"></circle>' +
-        '<text class="place-label" x="' +
-        (p.x + 8) +
-        '" y="' +
-        (p.y + 4) +
-        '">' +
-        escapeHtml(p.name) +
-        "</text></g>"
-      );
-    }).join("");
+  /* map — real Esri aerial of Lake St. Clair + verified lat/lng pins */
+  var liveMap = null;
+  var placeMarkers = [];
+  var checkinMarkers = [];
+  var mapReady = false;
+
+  function clearMarkers(list) {
+    list.forEach(function (m) {
+      m.remove();
+    });
+    list.length = 0;
   }
 
-  function renderCheckinPins() {
-    var layer = $("checkin-layer");
-    if (!layer) return;
-    var list = activeCheckins(checkins).filter(function (c) {
-      return mapVibeFilter === "all" || c.vibe === mapVibeFilter;
-    });
+  function makePinEl(opts) {
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "map-pin" + (opts.active ? " is-active" : "");
+    btn.title = opts.label;
+    btn.setAttribute("aria-label", opts.label);
+    if (opts.placeId) btn.dataset.place = opts.placeId;
+    if (opts.checkinId) btn.dataset.checkin = opts.checkinId;
+    var color = opts.color || "#FF3D82";
+    btn.innerHTML =
+      '<svg width="28" height="36" viewBox="0 0 30 38" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M15 1.5C8.1 1.5 2.5 7.1 2.5 14c0 8.8 12.5 22.5 12.5 22.5S27.5 22.8 27.5 14C27.5 7.1 21.9 1.5 15 1.5z" fill="' +
+      color +
+      '" stroke="#fff" stroke-width="2.2"/>' +
+      '<circle cx="15" cy="14" r="5" fill="rgba(0,0,0,.25)"/>' +
+      '<circle cx="15" cy="14" r="3.2" fill="#fff"/></svg>';
+    return btn;
+  }
 
-    layer.innerHTML = list
-      .map(function (c) {
-        var place = placeById(c.placeId);
-        var vibe = vibeById(c.vibe);
-        var jitter = ((c.id.charCodeAt(c.id.length - 1) || 1) % 7) - 3;
-        var x = place.x + jitter * 4;
-        var y = place.y + jitter * 3;
-        return (
-          '<g class="checkin-pin" tabindex="0" role="button" data-checkin="' +
-          escapeHtml(c.id) +
-          '" aria-label="' +
-          escapeHtml(c.author) +
-          " · " +
-          escapeHtml(vibe.label) +
-          '">' +
-          '<circle class="pin-ring" cx="' +
-          x +
-          '" cy="' +
-          y +
-          '" r="14" fill="' +
-          vibe.color +
-          '" opacity="0.35"></circle>' +
-          '<circle cx="' +
-          x +
-          '" cy="' +
-          y +
-          '" r="9" fill="' +
-          vibe.color +
-          '" stroke="#e8f4fb" stroke-width="2"></circle>' +
-          "</g>"
-        );
-      })
-      .join("");
-
+  function updateMapSummary() {
     var active = activeCheckins(checkins);
-    $("summary-active").textContent = active.length + " check-ins";
+    var activeEl = $("summary-active");
+    var hotEl = $("summary-hot");
+    var updatedEl = $("summary-updated");
+    if (activeEl) activeEl.textContent = active.length + " check-ins";
     var hotspot = {};
     active.forEach(function (c) {
       hotspot[c.placeId] = (hotspot[c.placeId] || 0) + 1;
@@ -420,8 +433,60 @@
     var top = Object.keys(hotspot).sort(function (a, b) {
       return hotspot[b] - hotspot[a];
     })[0];
-    $("summary-hot").textContent = top ? placeById(top).name : "—";
-    $("summary-updated").textContent = "just now";
+    if (hotEl) hotEl.textContent = top ? placeById(top).name : "—";
+    if (updatedEl) updatedEl.textContent = "just now";
+  }
+
+  function renderPlaces() {
+    if (!liveMap || !mapReady || !window.maplibregl) return;
+    clearMarkers(placeMarkers);
+    PLACES.forEach(function (p) {
+      var el = makePinEl({
+        label: p.name,
+        placeId: p.id,
+        color: TYPE_COLORS[p.type] || "#FF3D82",
+        active: false,
+      });
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openSheetForPlace(p.id);
+      });
+      var marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([p.lng, p.lat])
+        .addTo(liveMap);
+      placeMarkers.push(marker);
+    });
+  }
+
+  function renderCheckinPins() {
+    updateMapSummary();
+    if (!liveMap || !mapReady || !window.maplibregl) return;
+    clearMarkers(checkinMarkers);
+    var list = activeCheckins(checkins).filter(function (c) {
+      return mapVibeFilter === "all" || c.vibe === mapVibeFilter;
+    });
+
+    list.forEach(function (c) {
+      var place = placeById(c.placeId);
+      var vibe = vibeById(c.vibe);
+      var jitter = ((c.id.charCodeAt(c.id.length - 1) || 1) % 7) - 3;
+      var lng = place.lng + jitter * 0.004;
+      var lat = place.lat + jitter * 0.003;
+      var el = makePinEl({
+        label: c.author + " · " + vibe.label,
+        checkinId: c.id,
+        color: vibe.color,
+        active: true,
+      });
+      el.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openSheetForCheckin(c.id);
+      });
+      var marker = new maplibregl.Marker({ element: el, anchor: "bottom" })
+        .setLngLat([lng, lat])
+        .addTo(liveMap);
+      checkinMarkers.push(marker);
+    });
   }
 
   function openSheetForCheckin(id) {
@@ -464,7 +529,86 @@
     sheet.dataset.placeId = place.id;
   }
 
-  renderPlaces();
+  function initLiveMap() {
+    var container = $("live-map");
+    var maplib = window.maplibregl;
+    if (!container) return;
+    if (!maplib || typeof maplib.Map !== "function") {
+      container.innerHTML =
+        '<p class="map-fallback">Loading Lake St. Clair map…</p>';
+      return;
+    }
+
+    try {
+      liveMap = new maplib.Map({
+        container: container,
+        style: {
+          version: 8,
+          sources: {
+            esri: {
+              type: "raster",
+              tiles: [
+                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+              ],
+              tileSize: 256,
+              attribution:
+                "Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics",
+              maxzoom: 19,
+            },
+          },
+          layers: [{ id: "esri", type: "raster", source: "esri" }],
+        },
+        center: LAKE_FRAME.center,
+        zoom: 10.2,
+        attributionControl: true,
+        maxBounds: [
+          [LAKE_FRAME.sw[0] - 0.15, LAKE_FRAME.sw[1] - 0.12],
+          [LAKE_FRAME.ne[0] + 0.15, LAKE_FRAME.ne[1] + 0.12],
+        ],
+      });
+      window.__raftoffMap = liveMap;
+
+      liveMap.fitBounds([LAKE_FRAME.sw, LAKE_FRAME.ne], {
+        padding: 28,
+        duration: 0,
+        maxZoom: 11.2,
+      });
+
+      liveMap.on("load", function () {
+        mapReady = true;
+        renderPlaces();
+        renderCheckinPins();
+        liveMap.resize();
+      });
+
+      liveMap.on("click", function () {
+        var sheet = $("map-sheet");
+        if (sheet) sheet.hidden = true;
+      });
+
+      window.addEventListener("resize", function () {
+        if (liveMap) liveMap.resize();
+      });
+    } catch (err) {
+      console.error("Lake St. Clair map failed", err);
+      container.innerHTML =
+        '<p class="map-fallback">Could not load aerial map. Check your connection.</p>';
+    }
+  }
+
+  // Defer until layout has real dimensions (MapLibre needs non-zero container)
+  updateMapSummary();
+  if (document.readyState === "complete") {
+    requestAnimationFrame(function () {
+      initLiveMap();
+    });
+  } else {
+    window.addEventListener("load", function () {
+      requestAnimationFrame(function () {
+        initLiveMap();
+      });
+    });
+  }
 
   function setMapFilter(id) {
     mapVibeFilter = id;
@@ -472,17 +616,6 @@
     renderCheckinPins();
   }
   renderVibeChips("vibe-filters", mapVibeFilter, setMapFilter, true);
-  renderCheckinPins();
-
-  $("checkin-layer").addEventListener("click", function (event) {
-    var pin = event.target.closest("[data-checkin]");
-    if (pin) openSheetForCheckin(pin.getAttribute("data-checkin"));
-  });
-
-  $("place-layer").addEventListener("click", function (event) {
-    var mark = event.target.closest("[data-place]");
-    if (mark) openSheetForPlace(mark.getAttribute("data-place"));
-  });
 
   $("sheet-close").addEventListener("click", function () {
     $("map-sheet").hidden = true;

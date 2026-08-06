@@ -17,6 +17,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/app.css" />
+    <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
   </head>
   <body class="app-body">
     <div class="app-shell">
@@ -53,64 +55,14 @@
         <section class="panel is-active" id="panel-map" data-panel="map">
           <div class="live-strip" id="summary-card">
             <span class="live-pill"><span class="live-dot"></span> <strong id="summary-active">12 check-ins</strong></span>
-            <span class="live-meta">Hot · <strong id="summary-hot">Sandbar East</strong></span>
+            <span class="live-meta">Hot · <strong id="summary-hot">Strawberry Island</strong></span>
             <span class="live-meta" id="summary-updated">just now</span>
           </div>
 
           <div class="filter-row" id="vibe-filters" aria-label="Vibe filters"></div>
 
           <div class="map-stage">
-            <svg
-              class="lake-map"
-              viewBox="0 0 800 640"
-              role="img"
-              aria-label="Lake St. Clair activity map"
-            >
-              <defs>
-                <linearGradient id="water" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stop-color="#1a6f8f" />
-                  <stop offset="45%" stop-color="#0d4560" />
-                  <stop offset="100%" stop-color="#071828" />
-                </linearGradient>
-                <radialGradient id="waterGlow" cx="55%" cy="40%" r="45%">
-                  <stop offset="0%" stop-color="#ff4d8d" stop-opacity="0.22" />
-                  <stop offset="55%" stop-color="#2ef2c8" stop-opacity="0.18" />
-                  <stop offset="100%" stop-color="#071828" stop-opacity="0" />
-                </radialGradient>
-                <pattern id="shoreNoise" width="8" height="8" patternUnits="userSpaceOnUse">
-                  <circle cx="1" cy="1" r="0.6" fill="rgba(255,255,255,0.04)" />
-                </pattern>
-              </defs>
-              <rect width="800" height="640" fill="#071520" />
-              <path
-                d="M60 90 C180 40 340 50 460 110 C580 50 700 80 760 160
-                   L780 520 C680 590 520 610 380 560 C240 610 120 560 50 470 Z"
-                fill="#12283a"
-              />
-              <path
-                class="lake-body"
-                d="M140 170 C260 110 400 120 510 170 C620 130 700 180 730 260
-                   C760 360 720 470 640 520 C500 580 340 560 230 500
-                   C140 540 90 450 100 340 C105 250 90 200 140 170 Z"
-                fill="url(#water)"
-              />
-              <path
-                d="M140 170 C260 110 400 120 510 170 C620 130 700 180 730 260
-                   C760 360 720 470 640 520 C500 580 340 560 230 500
-                   C140 540 90 450 100 340 C105 250 90 200 140 170 Z"
-                fill="url(#waterGlow)"
-              />
-              <path
-                d="M140 170 C260 110 400 120 510 170 C620 130 700 180 730 260
-                   C760 360 720 470 640 520 C500 580 340 560 230 500
-                   C140 540 90 450 100 340 C105 250 90 200 140 170 Z"
-                fill="url(#shoreNoise)"
-              />
-              <text x="48" y="52" class="map-title">Lake St. Clair</text>
-              <text x="48" y="74" class="map-sub">Metro Detroit · live activity</text>
-              <g id="place-layer"></g>
-              <g id="checkin-layer"></g>
-            </svg>
+            <div id="live-map" class="live-map" role="img" aria-label="Lake St. Clair aerial activity map"></div>
 
             <aside class="sheet" id="map-sheet" hidden>
               <button type="button" class="sheet-close" id="sheet-close" aria-label="Close">×</button>
