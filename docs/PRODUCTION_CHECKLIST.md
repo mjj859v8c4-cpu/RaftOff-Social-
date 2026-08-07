@@ -49,13 +49,20 @@ Track every requirement through implementation. Status: `[ ]` pending · `[x]` d
 
 ## Deploy gates (manual — ops)
 
-- [ ] Supabase project provisioned; migrations applied
+- [x] Supabase project provisioned; migrations applied (`nvqbwacnvlpcllbitugx`)
 - [ ] Auth providers enabled (Email, Google, Apple) in Supabase dashboard
-- [ ] Storage buckets created + policies applied
-- [ ] Edge functions deployed with secrets
-- [ ] `expire-check-ins` scheduled (cron)
+- [x] Storage buckets created + policies applied (via production schema migration)
+- [x] Edge functions deployed (`expire-check-ins`, `location-feed`, `waitlist`)
+- [x] `expire-check-ins` scheduled (pg_cron every 5 min → `expire_check_ins()`)
 - [ ] Mapbox token URL-restricted
 - [ ] Sentry DSN configured
-- [ ] Netlify env vars set (no service-role on client)
+- [x] Netlify site linked + production deploy (`raftoff-social.netlify.app`)
+- [x] Custom domain attached (`raftoffsocial.com` + `www`); site SSO/password gate off (public)
+- [x] Domain attached on Netlify (`raftoffsocial.com` + `www`)
+- [x] Netlify DNS zone created (records ready)
+- [x] https://raftoffsocial.com serves Netlify + Let’s Encrypt SSL (`ssl: true`)
+- [ ] Netlify env vars set for Expo web build (no service-role on client)
 - [ ] Privacy / Terms / Guidelines linked in app + marketing site
 - [ ] Smoke test: signup → verify → drop anchor → like → comment → report
+- [ ] iOS App Store: EAS project + Apple Developer app created (see `docs/IOS_APP_STORE.md`)
+- [ ] iOS TestFlight build uploaded via `npm run build:ios:production`

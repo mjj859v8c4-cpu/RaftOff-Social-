@@ -60,7 +60,65 @@ export interface Profile {
   username: string;
   display_name: string;
   avatar_url?: string | null;
+  cover_url?: string | null;
   bio?: string | null;
+  home_lake_id?: string | null;
+  home_city?: string | null;
+  home_marina?: string | null;
+  email?: string | null;
+  role?: string;
+  is_verified?: boolean;
+  identity_tags?: string[];
+  badges?: string[];
+  primary_boat_id?: string | null;
+  profile_visibility?: "everyone" | "members" | "connections" | string;
+  message_privacy?: "everyone" | "following" | "connections" | string;
+  show_on_water?: boolean;
+  show_marina?: boolean;
+  show_boat?: boolean;
+  show_online?: boolean;
+  allow_connection_requests?: boolean;
+  onboarding_completed?: boolean;
+  profile_kind?: "personal" | "business" | "creator" | string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Boat {
+  id: string;
+  owner_id: string;
+  nickname: string;
+  name?: string | null;
+  boat_type?: string | null;
+  manufacturer?: string | null;
+  make?: string | null;
+  model?: string | null;
+  year?: number | null;
+  length_ft?: number | null;
+  primary_color?: string | null;
+  description?: string | null;
+  home_marina?: string | null;
+  photo_url?: string | null;
+  visibility?: string;
+  is_primary?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Interest {
+  id: string;
+  label: string;
+  category: string;
+  sort_order?: number;
+}
+
+export interface ProfilePhoto {
+  id: string;
+  profile_id: string;
+  url: string;
+  caption?: string | null;
+  sort_order: number;
+  created_at?: string;
 }
 
 export interface CheckIn {

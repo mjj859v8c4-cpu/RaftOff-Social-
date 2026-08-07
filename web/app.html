@@ -61,6 +61,12 @@
 
           <div class="filter-row" id="vibe-filters" aria-label="Vibe filters"></div>
 
+          <div class="filter-row layer-filters" id="layer-filters" aria-label="Map layers">
+            <button type="button" class="chip is-active" data-layer="all">All pins</button>
+            <button type="button" class="chip" data-layer="hotspots">Hotspots</button>
+            <button type="button" class="chip" data-layer="dining">Bars &amp; food</button>
+          </div>
+
           <div class="map-stage">
             <div id="live-map" class="live-map" role="img" aria-label="Lake St. Clair aerial activity map"></div>
 
@@ -80,6 +86,8 @@
               Drop Anchor
             </button>
           </div>
+
+          <section class="partner-strip" id="partner-strip" aria-label="Partner bars and restaurants"></section>
 
           <p class="safety-note">
             Not a navigation tool. Use official charts, weather, and Coast Guard guidance on the water.

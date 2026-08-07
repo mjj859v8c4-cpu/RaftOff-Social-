@@ -97,6 +97,14 @@ export default function RootLayout() {
                 name="locations/[locationId]"
                 options={{ title: "Location feed", presentation: "card" }}
               />
+              <Stack.Screen
+                name="profile/edit"
+                options={{ headerShown: false, presentation: "modal" }}
+              />
+              <Stack.Screen
+                name="u/[username]"
+                options={{ title: "Profile", presentation: "card" }}
+              />
               <Stack.Screen name="admin/index" options={{ title: "Admin" }} />
             </Stack>
           </View>

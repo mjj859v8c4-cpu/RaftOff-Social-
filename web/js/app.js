@@ -45,6 +45,29 @@
     { id: "detroit-river-entrance", name: "Detroit River Entrance", lat: 42.372, lng: -82.918, type: "channel" },
   ];
 
+  /**
+   * Partner bars & restaurants — differentiated for B2B (“you’re on RaftOff”).
+   * partnerTier: featured (ad pitch) | listed (free presence / upsell)
+   */
+  var DINING = [
+    { id: "scotty-simpsons", name: "Scotty Simpson’s Fish & Chips", lat: 42.4732, lng: -82.8794, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "Nautical Mile classic", pitch: "Dock-and-dine landmark on the Mile — featured partner placement." },
+    { id: "bliss-nautical-mile", name: "Bliss", lat: 42.4761, lng: -82.8812, type: "nightlife", category: "Nightlife", partnerTier: "featured", note: "Nautical Mile nightlife", pitch: "Prime nightlife pin — reach boaters before they pick a dock." },
+    { id: "brownies-on-the-lake", name: "Brownie’s on the Lake", lat: 42.4788, lng: -82.8825, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "SCS waterfront", pitch: "Waterfront patio energy — featured in Bars & food." },
+    { id: "lucianos-on-the-mile", name: "Luciano’s Italian Restaurant", lat: 42.4745, lng: -82.8801, type: "restaurant", category: "Restaurant", partnerTier: "listed", note: "Nautical Mile", pitch: "Listed on RaftOff — upgrade to Featured for map priority." },
+    { id: "mad-crab-scs", name: "Mad Crab", lat: 42.4812, lng: -82.884, type: "restaurant", category: "Restaurant", partnerTier: "listed", note: "SCS seafood", pitch: "Seafood stop for crews coming off the lake." },
+    { id: "pat-obriens-scs", name: "Pat O’Brien’s Bar & Grill", lat: 42.4705, lng: -82.8778, type: "bar", category: "Bar", partnerTier: "listed", note: "SCS bar", pitch: "Après-anchor bar pin for Mile traffic." },
+    { id: "lakeside-bar-grill", name: "Lakeside Bar & Grill", lat: 42.492, lng: -82.8865, type: "bar", category: "Bar", partnerTier: "listed", note: "Jefferson Beach corridor", pitch: "Marina-adjacent listing for dockside crews." },
+    { id: "deck-at-macray", name: "The Deck at MacRay Harbor", lat: 42.5685, lng: -82.8315, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "MacRay Harbor", pitch: "Harbor patio — featured dock-and-dine placement." },
+    { id: "cj-barrymores", name: "C.J. Barrymore’s", lat: 42.5895, lng: -82.8355, type: "nightlife", category: "Nightlife", partnerTier: "listed", note: "Harrison Twp", pitch: "Large-venue nightlife pin for lake-day spillover." },
+    { id: "the-wharf-st-clair", name: "The Wharf Restaurant", lat: 42.8265, lng: -82.4865, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "St. Clair riverfront", pitch: "Riverfront dining — north-lake featured partner." },
+    { id: "gilberts-lodge", name: "Gilbert’s Lodge", lat: 42.824, lng: -82.489, type: "restaurant", category: "Restaurant", partnerTier: "listed", note: "St. Clair", pitch: "Town dining listing for St. Clair day-trippers." },
+    { id: "tin-fish-new-baltimore", name: "Tin Fish", lat: 42.6815, lng: -82.7368, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "New Baltimore · Anchor Bay", pitch: "Anchor Bay waterfront — featured for north-bay boaters." },
+    { id: "pinkeys-boulevard-inn", name: "Pinkey’s Boulevard Inn", lat: 42.821, lng: -82.4925, type: "restaurant", category: "Restaurant", partnerTier: "listed", note: "St. Clair", pitch: "Historic inn dining — listed partner presence." },
+    { id: "surfside-bar-grill", name: "Surfside Bar & Grill", lat: 42.6155, lng: -82.7875, type: "bar", category: "Bar", partnerTier: "listed", note: "Near Belle Maer", pitch: "Bay-side bar listing for post-raft crews." },
+  ];
+
+  var ALL_PLACES = PLACES.concat(DINING);
+
   var LAKE_FRAME = {
     center: [-82.7, 42.505],
     sw: [-82.98, 42.33],
@@ -59,7 +82,13 @@
     launch: "#e8c36a",
     flats: "#56c7b0",
     channel: "#a78bfa",
+    bar: "#f0a04b",
+    restaurant: "#e8c36a",
+    waterfront_dining: "#ffb347",
+    nightlife: "#e879f9",
   };
+
+  var mapLayerFilter = "all"; /* all | hotspots | dining */
 
   var seedCheckins = [
     {
@@ -180,10 +209,21 @@
 
   function placeById(id) {
     return (
-      PLACES.find(function (p) {
+      ALL_PLACES.find(function (p) {
         return p.id === id;
       }) || PLACES[0]
     );
+  }
+
+  function isDiningPlace(p) {
+    return !!p && !!p.partnerTier;
+  }
+
+  function pinColorForPlace(p) {
+    if (isDiningPlace(p)) {
+      return p.partnerTier === "featured" ? "#f5c542" : TYPE_COLORS[p.type] || "#e8c36a";
+    }
+    return TYPE_COLORS[p.type] || "#FF3D82";
   }
 
   function initials(name) {
@@ -318,12 +358,83 @@
     ["anchor-place", "event-place"].forEach(function (id) {
       var el = $(id);
       if (!el) return;
-      el.innerHTML = PLACES.map(function (p) {
+      var hotspotOpts = PLACES.map(function (p) {
         return (
           '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + "</option>"
         );
       }).join("");
+      var diningOpts = DINING.map(function (p) {
+        var tag = p.partnerTier === "featured" ? " ★ Featured" : " · Partner";
+        return (
+          '<option value="' +
+          escapeHtml(p.id) +
+          '">' +
+          escapeHtml(p.name) +
+          tag +
+          "</option>"
+        );
+      }).join("");
+      el.innerHTML =
+        '<optgroup label="Hotspots">' +
+        hotspotOpts +
+        '</optgroup><optgroup label="Bars & restaurants">' +
+        diningOpts +
+        "</optgroup>";
     });
+  }
+
+  function renderPartnerStrip() {
+    var el = $("partner-strip");
+    if (!el) return;
+    var sorted = DINING.slice().sort(function (a, b) {
+      if (a.partnerTier === b.partnerTier) return a.name.localeCompare(b.name);
+      return a.partnerTier === "featured" ? -1 : 1;
+    });
+    el.innerHTML =
+      '<div class="partner-strip-head">' +
+      "<strong>Bars & restaurants on RaftOff</strong>" +
+      "<span>" +
+      DINING.filter(function (d) {
+        return d.partnerTier === "featured";
+      }).length +
+      " featured · " +
+      DINING.length +
+      " partners</span></div>" +
+      '<div class="partner-strip-row" role="list">' +
+      sorted
+        .map(function (d) {
+          return (
+            '<button type="button" class="partner-card partner-' +
+            escapeHtml(d.partnerTier) +
+            '" data-partner="' +
+            escapeHtml(d.id) +
+            '" role="listitem">' +
+            '<span class="partner-tier">' +
+            (d.partnerTier === "featured" ? "Featured partner" : "On RaftOff") +
+            "</span>" +
+            '<span class="partner-cat">' +
+            escapeHtml(d.category) +
+            "</span>" +
+            "<strong>" +
+            escapeHtml(d.name) +
+            "</strong>" +
+            "<small>" +
+            escapeHtml(d.note) +
+            "</small>" +
+            "</button>"
+          );
+        })
+        .join("") +
+      "</div>";
+    el.onclick = function (event) {
+      var btn = event.target.closest("[data-partner]");
+      if (!btn) return;
+      openSheetForPlace(btn.getAttribute("data-partner"));
+      if (liveMap && mapReady) {
+        var p = placeById(btn.getAttribute("data-partner"));
+        liveMap.flyTo({ center: [p.lng, p.lat], zoom: 12.5, essential: true });
+      }
+    };
   }
 
   function renderVibeChips(containerId, active, onPick, includeAll) {
@@ -379,7 +490,21 @@
   }
 
   fillPlaceSelects();
+  renderPartnerStrip();
   renderAnchorVibes();
+
+  var layerFilters = $("layer-filters");
+  if (layerFilters) {
+    layerFilters.onclick = function (event) {
+      var btn = event.target.closest("[data-layer]");
+      if (!btn) return;
+      mapLayerFilter = btn.getAttribute("data-layer");
+      layerFilters.querySelectorAll("[data-layer]").forEach(function (b) {
+        b.classList.toggle("is-active", b.getAttribute("data-layer") === mapLayerFilter);
+      });
+      renderPlaces();
+    };
+  }
 
   var eventVibe = $("event-vibe");
   if (eventVibe) {
@@ -440,13 +565,20 @@
   function renderPlaces() {
     if (!liveMap || !mapReady || !window.maplibregl) return;
     clearMarkers(placeMarkers);
-    PLACES.forEach(function (p) {
+    var list = ALL_PLACES.filter(function (p) {
+      if (mapLayerFilter === "dining") return isDiningPlace(p);
+      if (mapLayerFilter === "hotspots") return !isDiningPlace(p);
+      return true;
+    });
+    list.forEach(function (p) {
       var el = makePinEl({
         label: p.name,
         placeId: p.id,
-        color: TYPE_COLORS[p.type] || "#FF3D82",
-        active: false,
+        color: pinColorForPlace(p),
+        active: isDiningPlace(p) && p.partnerTier === "featured",
       });
+      if (isDiningPlace(p)) el.classList.add("map-pin-dining");
+      if (p.partnerTier === "featured") el.classList.add("map-pin-featured");
       el.addEventListener("click", function (e) {
         e.stopPropagation();
         openSheetForPlace(p.id);
@@ -517,14 +649,29 @@
       return c.placeId === id;
     });
     var sheet = $("map-sheet");
-    $("sheet-vibe").textContent = nearby.length
-      ? nearby.length + " active nearby"
-      : "Place";
-    $("sheet-title").textContent = place.name;
-    $("sheet-meta").textContent = place.type + " · Lake St. Clair";
-    $("sheet-body").textContent = nearby.length
-      ? "Live activity here. Drop Anchor to join the map."
-      : "Quiet right now — be the first to Drop Anchor.";
+    if (isDiningPlace(place)) {
+      $("sheet-vibe").innerHTML =
+        '<span class="partner-badge partner-' +
+        escapeHtml(place.partnerTier) +
+        '">' +
+        (place.partnerTier === "featured" ? "Featured partner" : "On RaftOff") +
+        "</span> · " +
+        escapeHtml(place.category);
+      $("sheet-title").textContent = place.name;
+      $("sheet-meta").textContent = place.note + " · Lake St. Clair";
+      $("sheet-body").textContent =
+        place.pitch ||
+        "Partner listing on RaftOff — ask about Featured ads & sponsored placement.";
+    } else {
+      $("sheet-vibe").textContent = nearby.length
+        ? nearby.length + " active nearby"
+        : "Place";
+      $("sheet-title").textContent = place.name;
+      $("sheet-meta").textContent = place.type + " · Lake St. Clair";
+      $("sheet-body").textContent = nearby.length
+        ? "Live activity here. Drop Anchor to join the map."
+        : "Quiet right now — be the first to Drop Anchor.";
+    }
     sheet.hidden = false;
     sheet.dataset.placeId = place.id;
   }

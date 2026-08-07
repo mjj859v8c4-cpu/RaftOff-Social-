@@ -13,7 +13,13 @@
     "seed:validate": "node scripts/validate-seed.js",
     "web:marketing": "npx --yes serve web -l 4173",
     "build:web": "npx expo export --platform web",
-    "prebuild:netlify": "node scripts/netlify-prebuild.js"
+    "prebuild:netlify": "node scripts/netlify-prebuild.js",
+    "eas:login": "npx eas-cli login",
+    "eas:init": "npx eas-cli init",
+    "build:ios:preview": "npx eas-cli build --platform ios --profile preview",
+    "build:ios:production": "npx eas-cli build --platform ios --profile production",
+    "submit:ios": "npx eas-cli submit --platform ios --latest --profile production",
+    "build:ios:submit": "npx eas-cli build --platform ios --profile production --auto-submit"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.1.2",
@@ -55,6 +61,8 @@
   "devDependencies": {
     "@babel/core": "^7.26.10",
     "@types/react": "~19.0.10",
+    "netlify-cli": "^27.1.0",
+    "supabase": "^2.111.0",
     "typescript": "~5.8.3"
   }
 }

@@ -16,6 +16,9 @@ export function LocationSheet({ location, onClose, onOpenFeed, onDropAnchor }: P
   const active = location.active_check_ins ?? 0;
   const isDining = location.type === "restaurant" || location.attributes?.group === "dining";
   const diningCat = String(location.attributes?.diningCategory ?? "dining").replace(/_/g, " ");
+  const tier = location.attributes?.partnerTier;
+  const isPartner = !!location.attributes?.partner || tier === "featured" || tier === "listed";
+  const pitch = typeof location.attributes?.pitch === "string" ? location.attributes.pitch : null;
 
   return (
     <View style={styles.sheet}>
@@ -25,7 +28,11 @@ export function LocationSheet({ location, onClose, onOpenFeed, onDropAnchor }: P
       <View style={styles.row}>
         <View style={[styles.dot, { backgroundColor: pinColorForType(location.type) }]} />
         <Text style={styles.type}>
-          {isDining ? `Bars & food · ${diningCat}` : location.type.replace(/_/g, " ")}
+          {isDining
+            ? isPartner
+              ? `${tier === "featured" ? "Featured partner" : "On RaftOff"} · ${diningCat}`
+              : `Bars & food · ${diningCat}`
+            : location.type.replace(/_/g, " ")}
         </Text>
       </View>
       <Text style={styles.title}>{location.name}</Text>
@@ -39,7 +46,8 @@ export function LocationSheet({ location, onClose, onOpenFeed, onDropAnchor }: P
         </Text>
       ) : (
         <Text style={styles.meta}>
-          Waterfront dining · Drop Anchor when you’re docked · share the vibe to the feed
+          {pitch ??
+            "Waterfront dining · Drop Anchor when you’re docked · share the vibe to the feed"}
         </Text>
       )}
       {location.verification_status === "needs_review" ? (

@@ -8,6 +8,9 @@
     "scheme": "raftoff",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -16,8 +19,42 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.raftoff.social",
+      "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "RaftOff uses your location only while the app is open so you can Drop Anchor at nearby Lake St. Clair destinations. Location is never required in the background."
+        "CFBundleDisplayName": "RaftOff",
+        "LSApplicationQueriesSchemes": ["raftoff"],
+        "NSLocationWhenInUseUsageDescription": "RaftOff uses your location only while the app is open so you can Drop Anchor at nearby Lake St. Clair destinations. Location is never required in the background.",
+        "NSPhotoLibraryUsageDescription": "Allow RaftOff to choose photos for your profile, boat, check-ins, and events.",
+        "NSCameraUsageDescription": "Allow RaftOff to take photos for your profile, boat, check-ins, and events.",
+        "NSUserTrackingUsageDescription": "RaftOff does not track you across other companies’ apps or websites for advertising.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyCollectedDataTypes": [],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1", "0A2A.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": ["35F9.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": ["E174.1"]
+          }
+        ]
       }
     },
     "android": {
@@ -26,9 +63,12 @@
         "backgroundColor": "#050A0F"
       },
       "package": "com.raftoff.social",
+      "versionCode": 1,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_MEDIA_IMAGES"
       ]
     },
     "web": {
@@ -43,13 +83,16 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow RaftOff to upload profile, boat, and check-in photos."
+          "photosPermission": "Allow RaftOff to upload profile, boat, and check-in photos.",
+          "cameraPermission": "Allow RaftOff to take photos for your profile, boat, and check-ins."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow RaftOff to use your location while using the app to Drop Anchor near Lake St. Clair places."
+          "locationWhenInUsePermission": "Allow RaftOff to use your location while using the app to Drop Anchor near Lake St. Clair places.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false
         }
       ],
       "expo-font",
@@ -64,7 +107,11 @@
       },
       "eas": {
         "projectId": "replace-with-eas-project-id"
-      }
+      },
+      "privacyPolicyUrl": "https://raftoffsocial.com/privacy",
+      "termsOfServiceUrl": "https://raftoffsocial.com/terms",
+      "supportUrl": "https://raftoffsocial.com",
+      "supportEmail": "privacy@raftoffsocial.com"
     }
   }
 }

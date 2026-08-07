@@ -96,7 +96,17 @@ export const useRaftOffStore = create<RaftOffState>((set, get) => ({
       .locationsForActiveLake()
       .filter((l) =>
         ["restaurant", "fuel", "bait", "marine_service"].includes(l.type)
-      ),
+      )
+      .sort((a, b) => {
+        const tier = (l: typeof a) =>
+          l.attributes?.partnerTier === "featured"
+            ? 0
+            : l.attributes?.partner || l.attributes?.partnerTier === "listed"
+              ? 1
+              : 2;
+        const d = tier(a) - tier(b);
+        return d !== 0 ? d : a.name.localeCompare(b.name);
+      }),
 
   getSummary: () =>
     get().summary ?? {

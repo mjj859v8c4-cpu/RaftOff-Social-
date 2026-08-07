@@ -16,10 +16,18 @@ export type AuthProfile = {
   username: string;
   display_name: string;
   avatar_url: string | null;
+  cover_url: string | null;
   bio: string | null;
   home_lake_id: string | null;
+  home_city: string | null;
+  home_marina: string | null;
   role: string;
   email: string | null;
+  identity_tags: string[];
+  badges: string[];
+  is_verified: boolean;
+  onboarding_completed: boolean;
+  primary_boat_id: string | null;
 };
 
 export class AuthError extends Error {
@@ -61,16 +69,59 @@ export async function fetchMyProfile(): Promise<AuthProfile | null> {
   if (!supabase) return null;
   const user = await getCurrentUser();
   if (!user) return null;
+
+  // Prefer social ensure so signup always has a profiles row
+  try {
+    const { ensureMyProfile } = await import("@/features/profiles/api");
+    const full = await ensureMyProfile({
+      displayName: (user.user_metadata?.display_name as string | undefined) ?? undefined,
+      email: user.email,
+    });
+    return {
+      id: full.id,
+      username: full.username,
+      display_name: full.display_name,
+      avatar_url: full.avatar_url ?? null,
+      cover_url: full.cover_url ?? null,
+      bio: full.bio ?? null,
+      home_lake_id: full.home_lake_id ?? null,
+      home_city: full.home_city ?? null,
+      home_marina: full.home_marina ?? null,
+      role: full.role ?? "user",
+      email: full.email ?? user.email ?? null,
+      identity_tags: full.identity_tags ?? [],
+      badges: full.badges ?? [],
+      is_verified: !!full.is_verified,
+      onboarding_completed: !!full.onboarding_completed,
+      primary_boat_id: full.primary_boat_id ?? null,
+    };
+  } catch (e) {
+    logger.warn("auth.fetchMyProfile.ensure", e);
+  }
+
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, display_name, avatar_url, bio, home_lake_id, role, email")
+    .select(
+      "id, username, display_name, avatar_url, cover_url, bio, home_lake_id, home_city, home_marina, role, email, identity_tags, badges, is_verified, onboarding_completed, primary_boat_id"
+    )
     .eq("id", user.id)
     .maybeSingle();
   if (error) {
     logger.error("auth.fetchMyProfile", error);
     throw new AuthError(error.message, error.code);
   }
-  return data as AuthProfile | null;
+  if (!data) return null;
+  return {
+    ...(data as AuthProfile),
+    identity_tags: (data as AuthProfile).identity_tags ?? [],
+    badges: (data as AuthProfile).badges ?? [],
+    is_verified: !!(data as AuthProfile).is_verified,
+    onboarding_completed: !!(data as AuthProfile).onboarding_completed,
+    cover_url: (data as AuthProfile).cover_url ?? null,
+    home_city: (data as AuthProfile).home_city ?? null,
+    home_marina: (data as AuthProfile).home_marina ?? null,
+    primary_boat_id: (data as AuthProfile).primary_boat_id ?? null,
+  };
 }
 
 export async function signUpWithEmail(input: {
