@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="About RaftOff Social — the Lake St. Clair story from founders DJ and CJ, the first two on the water."
+    />
+    <meta name="theme-color" content="#05040a" />
+    <meta property="og:title" content="About Us · RaftOff Social" />
+    <meta
+      property="og:description"
+      content="DJ and CJ built RaftOff for the crews who live on Lake St. Clair weekends."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="assets/scene-boat.jpg" />
+    <title>About Us · RaftOff Social</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="about-page">
+    <header class="site-header">
+      <a class="logo" href="index.html">RaftOff Social</a>
+      <nav class="nav" aria-label="Primary">
+        <a class="nav-link" href="about.html" aria-current="page">About</a>
+        <a class="nav-cta" href="app.html" data-track="web_cta" data-cta="header_open_app">Open free app</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero about-hero">
+        <div class="hero-media" aria-hidden="true">
+          <img
+            class="hero-photo"
+            src="assets/scene-boat.jpg"
+            alt=""
+            width="2200"
+            height="1467"
+            fetchpriority="high"
+          />
+          <div class="hero-veil"></div>
+          <div class="hero-grain"></div>
+          <div class="hero-shimmer"></div>
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="pulse-dot" aria-hidden="true"></span> Lake St. Clair · founders</p>
+          <p class="brand-mark">RaftOff Social</p>
+          <h1>Two friends. One lake. A crew worth finding.</h1>
+          <p class="lede">
+            DJ and CJ were the first people on RaftOff — founders who built it for the weekends that start at the dock.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="app.html" data-track="web_cta" data-cta="about_hero_app">Jump in free</a>
+            <a class="btn btn-ghost" href="#story" data-track="web_cta" data-cta="about_hero_story">Read the story</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="about-story" id="story">
+        <p class="section-kicker">The story</p>
+        <h2>It started where the sandbars fill up.</h2>
+        <p class="section-copy">
+          Every summer on Lake St. Clair, the same question hit the group chat:
+          who’s out, where’s the raft-up, and is there room for one more boat?
+          Texts got lost. Pins went cold. The vibe moved before anyone could pull up.
+        </p>
+        <p class="section-copy">
+          DJ and CJ got tired of guessing. They wanted a live map of the lake scene —
+          Drop Anchor when you’re on the water, see who’s nearby, and find your crew without burning half the day on scavenger-hunt DMs.
+          RaftOff Social is that answer: built first for St. Clair, made for boat owners and everyone they want onboard.
+        </p>
+      </section>
+
+      <section class="about-founders" id="founders" aria-labelledby="founders-heading">
+        <p class="section-kicker">First on the water</p>
+        <h2 id="founders-heading">Meet the founders</h2>
+        <p class="section-copy about-founders-lede">
+          Usernames <span class="mono">@dj</span> and <span class="mono">@cj</span> —
+          founding members, verified, and still the first two profiles on the lake.
+        </p>
+
+        <ul class="founder-list">
+          <li>
+            <p class="founder-handle">@dj</p>
+            <p class="founder-name">DJ</p>
+            <p class="founder-role">Co-founder · first user</p>
+            <p class="founder-blurb">
+              The spark for live lake maps and Drop Anchor check-ins —
+              always chasing the next raft-up before the sun slips.
+            </p>
+          </li>
+          <li>
+            <p class="founder-handle">@cj</p>
+            <p class="founder-name">CJ</p>
+            <p class="founder-role">Co-founder · CEO</p>
+            <p class="founder-blurb">
+              Keeps RaftOff pointed at real lake life — partners on the shoreline,
+              crews on the water, and a product boaters actually want to open.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section class="section section-cta">
+        <div class="cta-band">
+          <h2>Come find your spot.</h2>
+          <p class="section-copy">
+            Lake St. Clair is live. More Michigan lakes are rolling out.
+            Jump in free — the water’s better with a crew.
+          </p>
+          <div class="cta-row" style="margin-top: 1.6rem">
+            <a class="btn btn-primary" href="app.html" data-track="web_cta" data-cta="about_footer_app">Open free app</a>
+            <a class="btn btn-ghost" href="index.html#lakes" data-track="web_cta" data-cta="about_footer_lakes">Browse lakes</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© 2026 RaftOff Social · Not a navigation product</p>
+      <p>
+        <a href="about.html">About</a> ·
+        <a href="privacy.html">Privacy</a> ·
+        <a href="terms.html">Terms</a> ·
+        <a href="guidelines.html">Guidelines</a>
+      </p>
+    </footer>
+    <script>
+      (function () {
+        var key = "raftoff-web-meta-v1";
+        function sid() {
+          try {
+            var s = sessionStorage.getItem("raftoff-sid");
+            if (s) return s;
+            s = "w_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+            sessionStorage.setItem("raftoff-sid", s);
+            return s;
+          } catch (e) {
+            return "w_anon";
+          }
+        }
+        function push(name, props) {
+          var row = {
+            name: name,
+            ts: new Date().toISOString(),
+            session_id: sid(),
+            platform: "web",
+            hour_bucket: new Date().getHours(),
+            dow: new Date().getDay(),
+            commercial_ok: true,
+            props: props || {},
+          };
+          try {
+            var q = JSON.parse(localStorage.getItem(key) || "[]");
+            q.push(row);
+            if (q.length > 200) q = q.slice(-200);
+            localStorage.setItem(key, JSON.stringify(q));
+          } catch (e) {}
+        }
+        push("app_open", { source: "about_page" });
+        document.addEventListener("click", function (e) {
+          var t = e.target && e.target.closest && e.target.closest("[data-track]");
+          if (!t) return;
+          push(t.getAttribute("data-track"), { cta: t.getAttribute("data-cta") || "" });
+        });
+      })();
+    </script>
+  </body>
+</html>
