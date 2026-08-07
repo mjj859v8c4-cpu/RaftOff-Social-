@@ -78,6 +78,7 @@ export interface Profile {
   show_boat?: boolean;
   show_online?: boolean;
   allow_connection_requests?: boolean;
+  show_in_discovery?: boolean;
   onboarding_completed?: boolean;
   profile_kind?: "personal" | "business" | "creator" | string;
   created_at?: string;
@@ -139,6 +140,28 @@ export type ConnectionStatus =
   | "pending_out"
   | "pending_in"
   | "connected";
+
+export type NotificationType =
+  | "connection_request"
+  | "connection_accepted"
+  | "new_follower"
+  | "like"
+  | "comment"
+  | string;
+
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  actor_id?: string | null;
+  type: NotificationType;
+  title: string;
+  body?: string | null;
+  target_type?: string | null;
+  target_id?: string | null;
+  read_at?: string | null;
+  created_at: string;
+  actor?: Profile | null;
+}
 
 export interface DirectMessage {
   id: string;
@@ -243,4 +266,17 @@ export interface SeedLocation {
   };
   /** UI-only schematic map position (0–1). Not GPS. */
   schematic?: { x: number; y: number };
+}
+
+/** Voluntary, self-expiring status (~24h) shown on a profile / to connections (§40). */
+export interface UserStatus {
+  id: string;
+  profile_id: string;
+  lake_id?: string | null;
+  location_id?: string | null;
+  body: string;
+  expires_at: string;
+  created_at?: string;
+  updated_at?: string;
+  location?: Pick<Location, "id" | "name" | "slug"> | null;
 }

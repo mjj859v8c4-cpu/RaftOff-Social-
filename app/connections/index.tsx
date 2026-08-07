@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   Pressable,
@@ -16,11 +17,14 @@ import {
   acceptConnection,
   declineConnection,
   getOrCreateDm,
+  listActiveStatuses,
   listConnectionProfiles,
   listIncomingRequests,
   listOutgoingRequests,
+  mutualConnectionCount,
+  removeConnection,
 } from "@/features/profiles/api";
-import type { ConnectionRequest, Profile } from "@/types/raftoff";
+import type { ConnectionRequest, Profile, UserStatus } from "@/types/raftoff";
 
 type Tab = "connections" | "requests";
 
@@ -28,6 +32,8 @@ export default function ConnectionsScreen() {
   const userId = useAuthStore((s) => s.session?.user?.id);
   const [tab, setTab] = useState<Tab>("connections");
   const [people, setPeople] = useState<Profile[]>([]);
+  const [mutuals, setMutuals] = useState<Record<string, number>>({});
+  const [statuses, setStatuses] = useState<Record<string, UserStatus>>({});
   const [incoming, setIncoming] = useState<ConnectionRequest[]>([]);
   const [outgoing, setOutgoing] = useState<ConnectionRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +53,11 @@ export default function ConnectionsScreen() {
       setPeople(conn);
       setIncoming(inc);
       setOutgoing(out);
+      const counts = await Promise.all(
+        conn.map((p) => mutualConnectionCount(p.id).catch(() => 0))
+      );
+      setMutuals(Object.fromEntries(conn.map((p, i) => [p.id, counts[i]])));
+      setStatuses(await listActiveStatuses(conn.map((p) => p.id)).catch(() => ({})));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load");
     } finally {
@@ -57,6 +68,24 @@ export default function ConnectionsScreen() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const onRemove = (person: Profile) => {
+    if (!userId) return;
+    Alert.alert("Remove connection", `Remove ${person.display_name} from your connections?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: () => {
+          setBusyId(person.id);
+          void removeConnection(userId, person.id)
+            .then(() => setPeople((prev) => prev.filter((p) => p.id !== person.id)))
+            .catch((e) => setError(e instanceof Error ? e.message : "Could not remove"))
+            .finally(() => setBusyId(null));
+        },
+      },
+    ]);
+  };
 
   const onAccept = async (req: ConnectionRequest) => {
     setBusyId(req.id);
@@ -104,9 +133,14 @@ export default function ConnectionsScreen() {
           <Text style={styles.link}>Back</Text>
         </Pressable>
         <Text style={styles.title}>Connections</Text>
-        <Pressable onPress={() => router.push("/messages" as never)} hitSlop={12}>
-          <Text style={[styles.link, styles.accent]}>Messages</Text>
-        </Pressable>
+        <View style={styles.headerLinks}>
+          <Pressable onPress={() => router.push("/notifications" as never)} hitSlop={12}>
+            <Text style={styles.link}>🔔</Text>
+          </Pressable>
+          <Pressable onPress={() => router.push("/messages" as never)} hitSlop={12}>
+            <Text style={[styles.link, styles.accent]}>Messages</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.tabs}>
@@ -148,15 +182,33 @@ export default function ConnectionsScreen() {
               <Avatar profile={item} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.name}>{item.display_name}</Text>
-                <Text style={styles.handle}>@{item.username}</Text>
+                <Text style={styles.handle}>
+                  @{item.username}
+                  {mutuals[item.id] ? ` · ${mutuals[item.id]} mutual` : ""}
+                </Text>
+                {statuses[item.id] ? (
+                  <Text style={styles.statusLine} numberOfLines={1}>
+                    💬 {statuses[item.id].body}
+                  </Text>
+                ) : null}
               </View>
-              <Pressable
-                style={styles.msgBtn}
-                onPress={() => void openDm(item.id)}
-                disabled={busyId === item.id}
-              >
-                <Text style={styles.msgBtnText}>Message</Text>
-              </Pressable>
+              <View style={styles.connRowActions}>
+                <Pressable
+                  style={styles.msgBtn}
+                  onPress={() => void openDm(item.id)}
+                  disabled={busyId === item.id}
+                >
+                  <Text style={styles.msgBtnText}>Message</Text>
+                </Pressable>
+                <Pressable
+                  style={styles.removeBtn}
+                  hitSlop={8}
+                  onPress={() => onRemove(item)}
+                  disabled={busyId === item.id}
+                >
+                  <Text style={styles.removeBtnText}>Remove</Text>
+                </Pressable>
+              </View>
             </Pressable>
           )}
         />
@@ -233,6 +285,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   title: { color: colors.text, fontWeight: "800", fontSize: 16 },
+  headerLinks: { flexDirection: "row", alignItems: "center", gap: 14 },
   link: { color: colors.muted, fontWeight: "600" },
   accent: { color: colors.action },
   tabs: {
@@ -270,6 +323,7 @@ const styles = StyleSheet.create({
   avatarText: { color: "#fff", fontWeight: "800", fontSize: 13 },
   name: { color: colors.text, fontWeight: "800" },
   handle: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  statusLine: { color: colors.active, fontSize: 12, marginTop: 3, fontWeight: "600" },
   msgBtn: {
     borderWidth: 1,
     borderColor: colors.action,
@@ -278,6 +332,15 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   msgBtnText: { color: colors.action, fontWeight: "800", fontSize: 12 },
+  connRowActions: { flexDirection: "row", gap: 8 },
+  removeBtn: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  removeBtnText: { color: colors.muted, fontWeight: "700", fontSize: 12 },
   reqActions: { flexDirection: "row", gap: 6 },
   accept: {
     backgroundColor: colors.action,
