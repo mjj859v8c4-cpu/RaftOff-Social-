@@ -1,16 +1,55 @@
 import { Tabs } from "expo-router";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { colors } from "@/lib/theme";
+import { useUnreadMessages } from "@/features/messages/unread";
 
-function TabIcon({ label, focused }: { label: string; focused: boolean }) {
+function TabIcon({
+  label,
+  focused,
+  badge,
+}: {
+  label: string;
+  focused: boolean;
+  badge?: number;
+}) {
   return (
-    <Text style={{ fontSize: 16, opacity: focused ? 1 : 0.55, color: focused ? "#B9ECFF" : colors.muted }}>
-      {label}
-    </Text>
+    <View style={{ width: 34, alignItems: "center", justifyContent: "center" }}>
+      <Text
+        style={{
+          fontSize: 16,
+          opacity: focused ? 1 : 0.55,
+          color: focused ? "#B9ECFF" : colors.muted,
+        }}
+      >
+        {label}
+      </Text>
+      {badge && badge > 0 ? (
+        <View
+          style={{
+            position: "absolute",
+            top: -4,
+            right: 0,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            paddingHorizontal: 4,
+            backgroundColor: colors.action,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ color: "#fff", fontSize: 9, fontWeight: "800" }}>
+            {badge > 9 ? "9+" : badge}
+          </Text>
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 export default function TabsLayout() {
+  const unreadMessages = useUnreadMessages((s) => s.total);
+
   return (
     <Tabs
       screenOptions={{
@@ -43,18 +82,22 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon label="☰" focused={focused} />,
         }}
       />
+      {/* Messaging replaces the old Anchor tab. Check-in stays reachable from the
+          map FAB, location screens, and the Discover header. */}
       <Tabs.Screen
-        name="drop-anchor"
+        name="messages"
         options={{
-          title: "Anchor",
-          tabBarIcon: ({ focused }) => <TabIcon label="⚓" focused={focused} />,
+          title: "Messages",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon label="✉" focused={focused} badge={unreadMessages} />
+          ),
         }}
       />
       <Tabs.Screen
-        name="events"
+        name="discover"
         options={{
-          title: "Events",
-          tabBarIcon: ({ focused }) => <TabIcon label="▣" focused={focused} />,
+          title: "Discover",
+          tabBarIcon: ({ focused }) => <TabIcon label="◍" focused={focused} />,
         }}
       />
       <Tabs.Screen
@@ -64,6 +107,10 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => <TabIcon label="◉" focused={focused} />,
         }}
       />
+
+      {/* Routable, but not in the tab bar */}
+      <Tabs.Screen name="drop-anchor" options={{ href: null, title: "Check in" }} />
+      <Tabs.Screen name="events" options={{ href: null, title: "Events" }} />
     </Tabs>
   );
 }
