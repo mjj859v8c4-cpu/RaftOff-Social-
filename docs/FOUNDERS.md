@@ -1,73 +1,71 @@
-# Founders — DJ & CJ
-
-RaftOff’s first two people on the water are **DJ** (`@dj`) and **CJ** (`@cj`).
+# Founders & early crew
 
 ## Story (canonical)
 
-CJ thought of RaftOff in bed one day. Three years later he met DJ, who is an expert in technology. Together they created RaftOff Social because of their love for lakes, parties, and RaftOff on Lake St. Clair.
+CJ thought of RaftOff in bed one day. Three years later he met DJ, who is an expert in technology. Together they created RaftOff Social because of their love for lakes, parties, and rafting off on Lake St. Clair.
 
-| Handle | Display | Role | Default bio (seed) | Badges |
-|--------|---------|------|--------------------|--------|
-| `cj` | CJ | Co-founder · CEO · the vision | Thought of RaftOff in bed one day. Three years later linked with DJ and built RaftOff Social — lakes, parties, St. Clair. | `creator`, `founder`, `founding-member` |
-| `dj` | DJ | Co-founder · tech · first user | Tech with the bag. Met CJ, shipped RaftOff Social for lakes, parties, and St. Clair raft-ups. First on the water. | `creator`, `founder`, `founding-member` |
+DJ and CJ are the **first users / founders**.
 
-- Marketing story: [`web/about.html`](../web/about.html) → https://raftoffsocial.com/about.html
-- In-app badges: `components/profile/ProfileBadges.tsx` on own profile + `app/u/[username].tsx`
+Marketing page: [`web/about.html`](../web/about.html) → https://raftoffsocial.com/about.html
 
-## Badge ids
+## Who appears where
 
-| Id | Meaning | Who |
-|----|---------|-----|
-| `creator` | Created RaftOff Social | DJ + CJ only |
-| `founder` | Founder | DJ + CJ only |
-| `founding-member` | Early launch member | Broader early cohort (also on DJ/CJ) |
+| Person | Role | About Us | App badges |
+|--------|------|----------|------------|
+| **CJ** (`@cj`) | Co-founder · CEO · vision | Founders section | `creator`, `co-founder` (+ `founding-member`) |
+| **DJ** (`@dj`) | Co-founder · tech · first user | Founders section | `creator`, `co-founder` (+ `founding-member`) |
+| **Gianna** | Early RaftOff crew | Crew section + `web/images/founders/gianna.jpg` | — |
+| **Lauren** | Early RaftOff crew | Crew section + `web/images/founders/lauren.jpg` | — |
 
-Migrations:
+## Badge ids (DJ & CJ)
+
+| Id | UI label | Notes |
+|----|----------|-------|
+| `creator` | **Creator** | Distinct coral chip — creators of RaftOff Social |
+| `co-founder` | **Co-founder** | Distinct coral chip |
+| `founder` | Founder | Legacy alias; UI hides if `co-founder` present |
+| `founding-member` | Founding | Broader early cohort badge |
+
+Rendered by [`components/profile/ProfileBadges.tsx`](../components/profile/ProfileBadges.tsx) on:
+
+- Own profile: `app/(tabs)/profile.tsx`
+- Public profile: `app/u/[username].tsx`
+
+## Migrations
 
 - `supabase/migrations/20260807235000_founder_profiles.sql`
 - `supabase/migrations/20260807236000_creator_badges.sql`
 
-## Why no auth seed in migrations
-
-`public.profiles.id` references `auth.users(id)`. Migrations cannot invent real login accounts without passwords or invite tokens. Instead:
-
-1. Create the two accounts in Supabase Auth (Dashboard → Authentication → Users, or invite email).
-2. Prefer signup metadata so the trigger creates clean profiles:
-
-```json
-{
-  "display_name": "DJ"
-}
-```
-
-(and `"display_name": "CJ"` for CJ).
-
-3. Set usernames to `dj` / `cj`, then push founder migrations:
+Apply:
 
 ```bash
 npx supabase db push --linked
 ```
 
-Optional one-shot after both accounts exist (SQL editor):
+## Claiming @dj / @cj after signup
+
+`profiles.id` references `auth.users` — migrations cannot invent logins.
+
+1. Create Auth users for DJ and CJ (Dashboard or invite).
+2. Set usernames to `dj` / `cj` (or display names `DJ` / `CJ`).
+3. Push migrations (or run SQL below).
 
 ```sql
 update public.profiles
 set username = 'dj', display_name = 'DJ', is_verified = true,
-    badges = array['creator', 'founder', 'founding-member'],
-    bio = 'Tech with the bag. Met CJ, shipped RaftOff Social for lakes, parties, and St. Clair raft-ups. First on the water.'
+    badges = array['creator', 'co-founder', 'founding-member'],
+    bio = 'Co-creator of RaftOff Social. Tech expert who met CJ and shipped the app for lakes, parties, and rafting off on St. Clair.'
 where id = '<DJ_AUTH_USER_UUID>';
 
 update public.profiles
 set username = 'cj', display_name = 'CJ', is_verified = true,
-    badges = array['creator', 'founder', 'founding-member'],
-    bio = 'Thought of RaftOff in bed one day. Three years later linked with DJ and built RaftOff Social — lakes, parties, St. Clair.'
+    badges = array['creator', 'co-founder', 'founding-member'],
+    bio = 'Thought of RaftOff in bed one day. Three years later met DJ and built RaftOff Social — lakes, parties, rafting off on St. Clair.'
 where id = '<CJ_AUTH_USER_UUID>';
 ```
 
 ## Checklist
 
-- [ ] Create DJ auth user; username `dj`
-- [ ] Create CJ auth user; username `cj`
-- [ ] Confirm `creator` + `founder` + `founding-member` and `is_verified`
-- [ ] Badges visible on Profile tab and `/u/dj` · `/u/cj`
-- [ ] About page live: `/about.html`
+- [ ] Create DJ + CJ auth users; claim `dj` / `cj`
+- [ ] Confirm Creator + Co-founder chips on Profile + `/u/dj` · `/u/cj`
+- [ ] About page live with Gianna & Lauren portraits

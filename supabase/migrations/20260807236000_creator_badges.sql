@@ -3,13 +3,13 @@
 
 do $$
 declare
-  founder_badges text[] := array['founding-member', 'founder', 'creator'];
+  founder_badges text[] := array['founding-member', 'creator', 'co-founder', 'founder'];
 begin
   update public.profiles
   set
-    display_name = case lower(username)
-      when 'dj' then 'DJ'
-      when 'cj' then 'CJ'
+    display_name = case
+      when lower(username) = 'dj' or lower(display_name) = 'dj' then 'DJ'
+      when lower(username) = 'cj' or lower(display_name) = 'cj' then 'CJ'
       else display_name
     end,
     is_verified = true,
@@ -19,11 +19,11 @@ begin
     ),
     bio = coalesce(
       nullif(bio, ''),
-      case lower(username)
-        when 'dj' then
-          'Tech with the bag. Met CJ, shipped RaftOff Social for lakes, parties, and St. Clair raft-ups. First on the water.'
-        when 'cj' then
-          'Thought of RaftOff in bed one day. Three years later linked with DJ and built RaftOff Social — lakes, parties, St. Clair.'
+      case
+        when lower(username) = 'dj' or lower(display_name) = 'dj' then
+          'Co-creator of RaftOff Social. Tech expert who met CJ and shipped the app for lakes, parties, and rafting off on St. Clair.'
+        when lower(username) = 'cj' or lower(display_name) = 'cj' then
+          'Thought of RaftOff in bed one day. Three years later met DJ and built RaftOff Social — lakes, parties, rafting off on St. Clair.'
         else bio
       end
     ),
