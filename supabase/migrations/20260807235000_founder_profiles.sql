@@ -37,7 +37,7 @@ begin
       badges = (
         select array_agg(distinct b)
         from unnest(
-          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder']::text[]
+          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder', 'creator']::text[]
         ) as b
       ),
       bio = coalesce(
@@ -54,7 +54,7 @@ begin
       badges = (
         select array_agg(distinct b)
         from unnest(
-          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder']::text[]
+          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder', 'creator']::text[]
         ) as b
       ),
       bio = coalesce(
@@ -76,7 +76,7 @@ begin
       badges = (
         select array_agg(distinct b)
         from unnest(
-          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder']::text[]
+          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder', 'creator']::text[]
         ) as b
       ),
       bio = coalesce(
@@ -93,7 +93,7 @@ begin
       badges = (
         select array_agg(distinct b)
         from unnest(
-          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder']::text[]
+          coalesce(badges, '{}'::text[]) || array['founding-member', 'founder', 'creator']::text[]
         ) as b
       ),
       bio = coalesce(
@@ -113,7 +113,7 @@ set
   badges = (
     select array_agg(distinct b)
     from unnest(
-      coalesce(badges, '{}'::text[]) || array['founding-member', 'founder']::text[]
+      coalesce(badges, '{}'::text[]) || array['founding-member', 'founder', 'creator']::text[]
     ) as b
   ),
   updated_at = now()
@@ -126,7 +126,7 @@ set
   badges = (
     select array_agg(distinct b)
     from unnest(
-      coalesce(badges, '{}'::text[]) || array['founding-member', 'founder']::text[]
+      coalesce(badges, '{}'::text[]) || array['founding-member', 'founder', 'creator']::text[]
     ) as b
   ),
   updated_at = now()

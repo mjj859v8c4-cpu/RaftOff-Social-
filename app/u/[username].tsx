@@ -18,6 +18,7 @@ import { useAuthStore } from "@/features/auth/store";
 import { useRaftOffStore } from "@/features/map/store";
 import type { Boat, ConnectionStatus, Profile } from "@/types/raftoff";
 import { ReportBlockModal } from "@/components/moderation/ReportBlockModal";
+import { ProfileBadges } from "@/components/profile/ProfileBadges";
 
 export default function PublicProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -109,6 +110,7 @@ export default function PublicProfileScreen() {
           {profile.is_verified ? " ✓" : ""}
         </Text>
         <Text style={styles.handle}>@{profile.username}</Text>
+        <ProfileBadges badges={profile.badges} />
         <Text style={styles.lake}>📍 {lakeName}</Text>
         {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
         <Text style={styles.stats}>

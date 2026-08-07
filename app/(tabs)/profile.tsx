@@ -27,6 +27,7 @@ import {
   profileCompletion,
 } from "@/features/profiles/api";
 import type { Boat, Interest } from "@/types/raftoff";
+import { ProfileBadges } from "@/components/profile/ProfileBadges";
 
 export default function ProfileScreen() {
   const activeMineId = useRaftOffStore((s) => s.activeMineId);
@@ -126,12 +127,12 @@ export default function ProfileScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.name}>
             {authProfile?.display_name ?? "You"}
-            {authProfile?.badges?.includes("founding-member") ? " · Founding" : ""}
           </Text>
           <Text style={styles.user}>
             @{authProfile?.username ?? "boater"}
             {authProfile?.home_city ? ` · ${authProfile.home_city}` : ""}
           </Text>
+          <ProfileBadges badges={authProfile?.badges} />
           <Text style={styles.lakeLine}>📍 {lakeName}</Text>
           {authProfile?.bio ? <Text style={styles.bio}>{authProfile.bio}</Text> : null}
           <View style={styles.chips}>
