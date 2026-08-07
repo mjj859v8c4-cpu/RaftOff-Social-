@@ -68,4 +68,5 @@ where id = '<CJ_AUTH_USER_UUID>';
 
 - [ ] Create DJ + CJ auth users; claim `dj` / `cj`
 - [ ] Confirm Creator + Co-founder chips on Profile + `/u/dj` · `/u/cj`
-- [ ] About page live with Gianna & Lauren portraits
+- [x] About page with Gianna & Lauren portraits + Creator/Co-founder badge chips
+- [ ] About live at https://raftoffsocial.com/about (and `/about.html`)
