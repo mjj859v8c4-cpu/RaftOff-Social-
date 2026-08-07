@@ -42,7 +42,7 @@ begin
       ),
       bio = coalesce(
         nullif(bio, ''),
-        'Co-founder of RaftOff Social. First on the water — Lake St. Clair.'
+        'Tech with the bag. Met CJ, shipped RaftOff Social for lakes, parties, and St. Clair raft-ups. First on the water.'
       ),
       updated_at = now()
     where id = dj_id;
@@ -59,7 +59,7 @@ begin
       ),
       bio = coalesce(
         nullif(bio, ''),
-        'Co-founder of RaftOff Social. First on the water — Lake St. Clair.'
+        'Tech with the bag. Met CJ, shipped RaftOff Social for lakes, parties, and St. Clair raft-ups. First on the water.'
       ),
       updated_at = now()
     where id = dj_id;
@@ -81,7 +81,7 @@ begin
       ),
       bio = coalesce(
         nullif(bio, ''),
-        'Co-founder & CEO of RaftOff Social. Building the lake scene from St. Clair out.'
+        'Thought of RaftOff in bed one day. Three years later linked with DJ and built RaftOff Social — lakes, parties, St. Clair.'
       ),
       updated_at = now()
     where id = cj_id;
@@ -98,7 +98,7 @@ begin
       ),
       bio = coalesce(
         nullif(bio, ''),
-        'Co-founder & CEO of RaftOff Social. Building the lake scene from St. Clair out.'
+        'Thought of RaftOff in bed one day. Three years later linked with DJ and built RaftOff Social — lakes, parties, St. Clair.'
       ),
       updated_at = now()
     where id = cj_id;

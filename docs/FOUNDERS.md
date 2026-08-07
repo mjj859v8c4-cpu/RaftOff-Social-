@@ -2,10 +2,14 @@
 
 RaftOff’s first two people on the water are **DJ** (`@dj`) and **CJ** (`@cj`).
 
-| Handle | Display | Role on About page | Badges |
-|--------|---------|--------------------|--------|
-| `dj` | DJ | Co-founder · first user | `founding-member`, `founder` |
-| `cj` | CJ | Co-founder · CEO | `founding-member`, `founder` |
+## Story (canonical)
+
+CJ thought of RaftOff in bed one day. Three years later he met DJ, who is an expert in technology. Together they created RaftOff Social because of their love for lakes, parties, and RaftOff on Lake St. Clair.
+
+| Handle | Display | Role on About page | Default bio (seed) | Badges |
+|--------|---------|--------------------|--------------------|--------|
+| `cj` | CJ | Co-founder · CEO · the vision | Thought of RaftOff in bed one day. Three years later linked with DJ and built RaftOff Social — lakes, parties, St. Clair. | `founding-member`, `founder` |
+| `dj` | DJ | Co-founder · tech · first user | Tech with the bag. Met CJ, shipped RaftOff Social for lakes, parties, and St. Clair raft-ups. First on the water. | `founding-member`, `founder` |
 
 Story copy lives on the marketing site: [`web/about.html`](../web/about.html) → https://raftoffsocial.com/about.html
 
@@ -35,15 +39,17 @@ supabase db push
 Optional one-shot after both accounts exist (SQL editor):
 
 ```sql
--- Claim short usernames if still free, then badge
+-- Claim short usernames if still free, then badge + bios
 update public.profiles
 set username = 'dj', display_name = 'DJ', is_verified = true,
-    badges = array['founding-member', 'founder']
+    badges = array['founding-member', 'founder'],
+    bio = 'Tech with the bag. Met CJ, shipped RaftOff Social for lakes, parties, and St. Clair raft-ups. First on the water.'
 where id = '<DJ_AUTH_USER_UUID>';
 
 update public.profiles
 set username = 'cj', display_name = 'CJ', is_verified = true,
-    badges = array['founding-member', 'founder']
+    badges = array['founding-member', 'founder'],
+    bio = 'Thought of RaftOff in bed one day. Three years later linked with DJ and built RaftOff Social — lakes, parties, St. Clair.'
 where id = '<CJ_AUTH_USER_UUID>';
 ```
 
