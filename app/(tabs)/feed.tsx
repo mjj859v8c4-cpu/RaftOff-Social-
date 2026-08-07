@@ -1,9 +1,18 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { colors, spacing, vibes } from "@/lib/theme";
+import { router } from "expo-router";
+import { colors, spacing } from "@/lib/theme";
 import { useRaftOffStore } from "@/features/map/store";
+import { useAuthStore } from "@/features/auth/store";
 import { LakeSwitcher } from "@/components/map/LakeSwitcher";
+import { PostCard } from "@/components/feed/PostCard";
+import { CommentsSheet } from "@/components/feed/CommentsSheet";
+import { NewPostModal } from "@/components/feed/NewPostModal";
+import { NetworkActivity } from "@/components/feed/NetworkActivity";
+import { getSavedPostIds, toggleSavePost } from "@/features/posts/api";
+
+type Mode = "lake" | "network";
 
 export default function FeedScreen() {
   const posts = useRaftOffStore((s) => s.posts);
@@ -11,7 +20,13 @@ export default function FeedScreen() {
   const activeLakeId = useRaftOffStore((s) => s.activeLakeId);
   const setActiveLakeId = useRaftOffStore((s) => s.setActiveLakeId);
   const lakes = useRaftOffStore((s) => s.lakes);
+  const myId = useAuthStore((s) => s.session?.user?.id);
   const lakeName = lakes.find((l) => l.id === activeLakeId)?.name ?? "Lake";
+
+  const [mode, setMode] = useState<Mode>("lake");
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [saved, setSaved] = useState<Set<string>>(new Set());
 
   const lakePosts = useMemo(
     () =>
@@ -21,98 +36,131 @@ export default function FeedScreen() {
     [posts, activeLakeId]
   );
 
+  useEffect(() => {
+    if (!myId || mode !== "lake") return;
+    void getSavedPostIds(
+      myId,
+      lakePosts.map((p) => p.id)
+    ).then(setSaved);
+  }, [myId, mode, lakePosts]);
+
+  const onToggleSave = async (postId: string) => {
+    if (!myId) return;
+    const { saved: nowSaved } = await toggleSavePost(postId, myId);
+    setSaved((prev) => {
+      const next = new Set(prev);
+      if (nowSaved) next.add(postId);
+      else next.delete(postId);
+      return next;
+    });
+  };
+
   return (
     <SafeAreaView style={styles.wrap} edges={["top"]}>
-        <View style={styles.switcher}>
+      <View style={styles.switcher}>
         <LakeSwitcher value={activeLakeId} onChange={setActiveLakeId} />
       </View>
-      <Text style={styles.sub}>
-        <Text style={styles.dot}>● </Text>
-        Feed · {lakeName}
-      </Text>
-      <FlatList
-        data={lakePosts}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: 40 }}
-        renderItem={({ item }) => {
-          const vibe = vibes.find((v) => v.id === (item as { vibe?: string }).vibe);
-          return (
-            <View style={styles.card}>
-              <View style={styles.row}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {(item.profile?.display_name ?? "?").slice(0, 2).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.author}>{item.profile?.display_name ?? "Member"}</Text>
-                  <Text style={styles.meta}>
-                    {item.location?.name ?? lakeName}
-                    {vibe ? ` · ${vibe.label}` : ""} · {formatAge(item.created_at)}
-                    {item.check_in_id ? " · check-in" : ""}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.body}>{item.text}</Text>
-              <Pressable style={styles.like} onPress={() => toggleLike(item.id)}>
-                <Text style={[styles.likeText, item.liked_by_me && styles.liked]}>
-                  {item.liked_by_me ? "Liked" : "Like"} · {item.like_count ?? 0}
-                </Text>
-              </Pressable>
-            </View>
-          );
-        }}
-        ListEmptyComponent={
-          <Text style={styles.empty}>
-            No posts on {lakeName} yet — Drop Anchor to start the feed.
-          </Text>
-        }
+
+      <View style={styles.segmentRow}>
+        <View style={styles.segment}>
+          <Pressable
+            style={[styles.segmentBtn, mode === "lake" && styles.segmentBtnActive]}
+            onPress={() => setMode("lake")}
+          >
+            <Text style={[styles.segmentText, mode === "lake" && styles.segmentTextActive]}>
+              Lake
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.segmentBtn, mode === "network" && styles.segmentBtnActive]}
+            onPress={() => setMode("network")}
+          >
+            <Text style={[styles.segmentText, mode === "network" && styles.segmentTextActive]}>
+              Network
+            </Text>
+          </Pressable>
+        </View>
+        <Pressable style={styles.composeBtn} onPress={() => setComposeOpen(true)}>
+          <Text style={styles.composeBtnText}>+ Post</Text>
+        </Pressable>
+      </View>
+
+      {mode === "lake" ? (
+        <FlatList
+          data={lakePosts}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: 40 }}
+          ListHeaderComponent={
+            <Text style={styles.sub}>
+              <Text style={styles.dot}>● </Text>
+              Feed · {lakeName}
+            </Text>
+          }
+          renderItem={({ item }) => (
+            <PostCard
+              post={item}
+              onLike={() => toggleLike(item.id)}
+              onOpenComments={() => setCommentsPostId(item.id)}
+              onToggleSave={() => onToggleSave(item.id)}
+              saved={saved.has(item.id)}
+              fallbackLocationLabel={lakeName}
+              onOpenProfile={
+                item.profile?.username
+                  ? () => router.push(`/u/${item.profile!.username}` as never)
+                  : undefined
+              }
+            />
+          )}
+          ListEmptyComponent={
+            <Text style={styles.empty}>
+              No posts on {lakeName} yet — Drop Anchor or tap + Post to start the feed.
+            </Text>
+          }
+        />
+      ) : (
+        <NetworkActivity onOpenComments={setCommentsPostId} />
+      )}
+
+      <CommentsSheet
+        postId={commentsPostId}
+        visible={!!commentsPostId}
+        onClose={() => setCommentsPostId(null)}
       />
+      <NewPostModal visible={composeOpen} onClose={() => setComposeOpen(false)} />
     </SafeAreaView>
   );
-}
-
-function formatAge(iso: string) {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
 }
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
   switcher: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  sub: { color: colors.muted, paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
-  dot: { color: colors.active },
-  card: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.line,
-    paddingBottom: spacing.md,
-  },
-  row: { flexDirection: "row", gap: 10, marginBottom: 8 },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.bgSoft,
+  segmentRow: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
   },
-  avatarText: { color: colors.text, fontWeight: "700", fontSize: 12 },
-  author: { color: colors.text, fontWeight: "700" },
-  meta: { color: colors.muted, fontSize: 12, marginTop: 2 },
-  body: { color: colors.text, fontSize: 15, lineHeight: 22, marginBottom: 8 },
-  like: {
-    alignSelf: "flex-start",
+  segment: {
+    flexDirection: "row",
+    backgroundColor: colors.bgSoft,
+    borderRadius: 999,
+    padding: 3,
+  },
+  segmentBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 999 },
+  segmentBtnActive: { backgroundColor: colors.action },
+  segmentText: { color: colors.muted, fontWeight: "700", fontSize: 13 },
+  segmentTextActive: { color: "#fff" },
+  composeBtn: {
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
-  likeText: { color: colors.muted, fontWeight: "700", fontSize: 12 },
-  liked: { color: "#B9ECFF" },
+  composeBtnText: { color: colors.text, fontWeight: "800", fontSize: 13 },
+  sub: { color: colors.muted, paddingBottom: spacing.sm },
+  dot: { color: colors.active },
   empty: { color: colors.muted, textAlign: "center", marginTop: 40, paddingHorizontal: 24 },
 });

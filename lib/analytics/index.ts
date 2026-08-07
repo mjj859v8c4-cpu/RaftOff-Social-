@@ -40,6 +40,8 @@ export type AnalyticsEventName =
   | "like_post"
   | "unlike_post"
   | "comment_post"
+  | "create_post"
+  | "save_post"
   | "event_view"
   | "create_event"
   | "rsvp_event"

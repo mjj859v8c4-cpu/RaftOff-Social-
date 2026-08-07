@@ -10,7 +10,8 @@ export type PhotoBucket =
   | "profile-photos"
   | "boat-photos"
   | "check-in-photos"
-  | "event-photos";
+  | "event-photos"
+  | "post-photos";
 
 function client() {
   const supabase = getSupabase();

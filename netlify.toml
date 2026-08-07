@@ -1,0 +1,28 @@
+# RaftOff Social — app deployment (Expo web export, `expo export -p web`)
+# Distinct from the marketing/legal static site (see web/netlify.toml).
+# expo-router web output is "single" (SPA), so every route — including
+# QR-code deep links like /u/[username] — needs to fall back to index.html
+# for client-side routing to take over.
+[build]
+  command = "npx expo export -p web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/_expo/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
