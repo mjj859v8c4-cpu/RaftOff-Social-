@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -22,6 +23,7 @@ import {
   upsertMyBoat,
   listBoatsForUser,
 } from "@/features/profiles/api";
+import { pickAndCompressImage, uploadPhoto } from "@/lib/media/upload";
 import type { Boat, Interest } from "@/types/raftoff";
 
 export default function EditProfileScreen() {
@@ -37,6 +39,9 @@ export default function EditProfileScreen() {
   const [homeCity, setHomeCity] = useState("");
   const [homeMarina, setHomeMarina] = useState("");
   const [homeLakeId, setHomeLakeId] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
+  const [uploadingKind, setUploadingKind] = useState<"avatar" | "cover" | null>(null);
   const [identityTags, setIdentityTags] = useState<string[]>([]);
   const [identityCatalog, setIdentityCatalog] = useState<{ id: string; label: string }[]>([]);
   const [interests, setInterests] = useState<Interest[]>([]);
@@ -58,6 +63,8 @@ export default function EditProfileScreen() {
     setHomeCity(authProfile.home_city ?? "");
     setHomeMarina(authProfile.home_marina ?? "");
     setHomeLakeId(authProfile.home_lake_id);
+    setAvatarUrl(authProfile.avatar_url ?? null);
+    setCoverUrl(authProfile.cover_url ?? null);
     setIdentityTags(authProfile.identity_tags ?? []);
     void (async () => {
       try {
@@ -86,6 +93,37 @@ export default function EditProfileScreen() {
     })();
   }, [userId, authProfile]);
 
+  const uploadProfileImage = useCallback(
+    async (kind: "avatar" | "cover") => {
+      if (!userId) return;
+      setUploadingKind(kind);
+      setError(null);
+      try {
+        const picked = await pickAndCompressImage({ allowsEditing: true });
+        if (!picked) return;
+        const uploaded = await uploadPhoto({
+          userId,
+          bucket: "profile-photos",
+          uri: picked.uri,
+          purpose: "profile",
+          entityType: kind,
+          entityId: userId,
+        });
+        const patch =
+          kind === "avatar" ? { avatar_url: uploaded.url } : { cover_url: uploaded.url };
+        await updateMyProfile(userId, patch);
+        if (kind === "avatar") setAvatarUrl(uploaded.url);
+        else setCoverUrl(uploaded.url);
+        await refreshProfile();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Photo upload failed");
+      } finally {
+        setUploadingKind(null);
+      }
+    },
+    [userId, refreshProfile]
+  );
+
   const toggleTag = (id: string) => {
     setIdentityTags((prev) =>
       prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id].slice(0, 8)
@@ -107,6 +145,8 @@ export default function EditProfileScreen() {
         display_name: displayName.trim() || "Boater",
         username: username.trim(),
         bio: bio.trim() || null,
+        avatar_url: avatarUrl,
+        cover_url: coverUrl,
         home_city: homeCity.trim() || null,
         home_marina: homeMarina.trim() || null,
         home_lake_id: homeLakeId,
@@ -150,6 +190,8 @@ export default function EditProfileScreen() {
     boatModel,
     boatType,
     boats,
+    avatarUrl,
+    coverUrl,
     refreshProfile,
   ]);
 
@@ -175,6 +217,60 @@ export default function EditProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <Text style={styles.section}>Photos</Text>
+        <Pressable
+          style={styles.coverTap}
+          onPress={() => void uploadProfileImage("cover")}
+          disabled={!!uploadingKind}
+        >
+          {coverUrl ? (
+            <Image source={{ uri: coverUrl }} style={styles.coverImg} />
+          ) : (
+            <View style={styles.coverEmpty}>
+              <Text style={styles.photoHint}>
+                {uploadingKind === "cover" ? "Uploading cover…" : "Tap to add cover photo"}
+              </Text>
+            </View>
+          )}
+        </Pressable>
+        <View style={styles.avatarRow}>
+          <Pressable
+            style={styles.avatarTap}
+            onPress={() => void uploadProfileImage("avatar")}
+            disabled={!!uploadingKind}
+          >
+            {avatarUrl ? (
+              <Image source={{ uri: avatarUrl }} style={styles.avatarImg} />
+            ) : (
+              <View style={styles.avatarEmpty}>
+                <Text style={styles.avatarEmptyText}>
+                  {(displayName || "?").slice(0, 2).toUpperCase()}
+                </Text>
+              </View>
+            )}
+          </Pressable>
+          <View style={{ flex: 1, gap: 8 }}>
+            <Pressable
+              style={styles.photoBtn}
+              onPress={() => void uploadProfileImage("avatar")}
+              disabled={!!uploadingKind}
+            >
+              <Text style={styles.photoBtnText}>
+                {uploadingKind === "avatar" ? "Uploading…" : "Change profile photo"}
+              </Text>
+            </Pressable>
+            <Pressable
+              style={styles.photoBtnGhost}
+              onPress={() => void uploadProfileImage("cover")}
+              disabled={!!uploadingKind}
+            >
+              <Text style={styles.photoBtnGhostText}>
+                {uploadingKind === "cover" ? "Uploading…" : "Change cover"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
 
         <Text style={styles.section}>Profile</Text>
         <Text style={styles.label}>Display name</Text>
@@ -332,6 +428,55 @@ const styles = StyleSheet.create({
     marginTop: 18,
     marginBottom: 6,
   },
+  coverTap: {
+    borderRadius: 14,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.line,
+    marginTop: 4,
+  },
+  coverImg: { width: "100%", height: 120 },
+  coverEmpty: {
+    height: 120,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(46,242,200,0.08)",
+  },
+  photoHint: { color: colors.muted, fontWeight: "700", fontSize: 13 },
+  avatarRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 12 },
+  avatarTap: { borderRadius: 40 },
+  avatarImg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: colors.action,
+    backgroundColor: colors.bgElevated,
+  },
+  avatarEmpty: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.action,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarEmptyText: { color: "#fff", fontWeight: "800", fontSize: 22 },
+  photoBtn: {
+    backgroundColor: colors.action,
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: "center",
+  },
+  photoBtnText: { color: "#fff", fontWeight: "800", fontSize: 13 },
+  photoBtnGhost: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  photoBtnGhostText: { color: colors.text, fontWeight: "700", fontSize: 13 },
   label: { color: colors.muted, fontSize: 12, fontWeight: "600", marginTop: 8 },
   input: {
     borderWidth: 1,

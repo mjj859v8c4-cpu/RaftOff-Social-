@@ -3,7 +3,16 @@
  */
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ApiError } from "@/lib/api/production";
-import type { Boat, Interest, Profile, ProfilePhoto } from "@/types/raftoff";
+import type {
+  Boat,
+  ConnectionRequest,
+  ConnectionStatus,
+  ConversationPreview,
+  DirectMessage,
+  Interest,
+  Profile,
+  ProfilePhoto,
+} from "@/types/raftoff";
 
 function client() {
   const sb = getSupabase();
@@ -20,6 +29,9 @@ const PROFILE_SELECT = `
   show_online, allow_connection_requests, onboarding_completed, profile_kind,
   created_at, updated_at
 `;
+
+const PROFILE_CARD =
+  "id, username, display_name, avatar_url, bio, home_city, home_lake_id, is_verified, badges";
 
 /** Ensure a profiles row exists for the signed-in user (covers race / missing trigger). */
 export async function ensureMyProfile(input?: {
@@ -377,4 +389,185 @@ export async function searchProfiles(query: string, limit = 20): Promise<Profile
     .limit(limit);
   if (error) throw new ApiError(error.message, error.code);
   return (data ?? []) as Profile[];
+}
+
+export async function getConnectionStatus(
+  meId: string,
+  otherId: string
+): Promise<{ status: ConnectionStatus; requestId?: string }> {
+  if (meId === otherId) return { status: "self" };
+  const a = meId < otherId ? meId : otherId;
+  const b = meId < otherId ? otherId : meId;
+  const connected = await client()
+    .from("connections")
+    .select("profile_a")
+    .eq("profile_a", a)
+    .eq("profile_b", b)
+    .maybeSingle();
+  if (connected.error) throw new ApiError(connected.error.message, connected.error.code);
+  if (connected.data) return { status: "connected" };
+
+  const [out, inn] = await Promise.all([
+    client()
+      .from("connection_requests")
+      .select("id")
+      .eq("status", "pending")
+      .eq("requester_id", meId)
+      .eq("recipient_id", otherId)
+      .maybeSingle(),
+    client()
+      .from("connection_requests")
+      .select("id")
+      .eq("status", "pending")
+      .eq("requester_id", otherId)
+      .eq("recipient_id", meId)
+      .maybeSingle(),
+  ]);
+  if (out.error) throw new ApiError(out.error.message, out.error.code);
+  if (inn.error) throw new ApiError(inn.error.message, inn.error.code);
+  if (out.data) return { status: "pending_out", requestId: out.data.id as string };
+  if (inn.data) return { status: "pending_in", requestId: inn.data.id as string };
+  return { status: "none" };
+}
+
+export async function listIncomingRequests(userId: string): Promise<ConnectionRequest[]> {
+  const { data, error } = await client()
+    .from("connection_requests")
+    .select(
+      `id, requester_id, recipient_id, status, message, created_at, responded_at,
+       requester:requester_id(${PROFILE_CARD})`
+    )
+    .eq("recipient_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? []) as unknown as ConnectionRequest[];
+}
+
+export async function listOutgoingRequests(userId: string): Promise<ConnectionRequest[]> {
+  const { data, error } = await client()
+    .from("connection_requests")
+    .select(
+      `id, requester_id, recipient_id, status, message, created_at, responded_at,
+       recipient:recipient_id(${PROFILE_CARD})`
+    )
+    .eq("requester_id", userId)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? []) as unknown as ConnectionRequest[];
+}
+
+export async function listConnectionProfiles(profileId: string): Promise<Profile[]> {
+  const ids = await listConnections(profileId);
+  if (!ids.length) return [];
+  const { data, error } = await client()
+    .from("profiles")
+    .select(PROFILE_SELECT)
+    .in("id", ids);
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? []) as Profile[];
+}
+
+export async function cancelConnectionRequest(requestId: string, requesterId: string) {
+  const { error } = await client()
+    .from("connection_requests")
+    .update({ status: "cancelled", responded_at: new Date().toISOString() })
+    .eq("id", requestId)
+    .eq("requester_id", requesterId);
+  if (error) throw new ApiError(error.message, error.code);
+}
+
+/** Direct messages */
+export async function getOrCreateDm(otherUserId: string): Promise<string> {
+  const { data, error } = await client().rpc("get_or_create_dm", { other_id: otherUserId });
+  if (error) throw new ApiError(error.message, error.code);
+  return data as string;
+}
+
+export async function listConversations(userId: string): Promise<ConversationPreview[]> {
+  const { data: memberships, error } = await client()
+    .from("conversation_members")
+    .select("conversation_id, conversations(id, updated_at)")
+    .eq("profile_id", userId);
+  if (error) throw new ApiError(error.message, error.code);
+  const rows = memberships ?? [];
+  if (!rows.length) return [];
+
+  const previews: ConversationPreview[] = [];
+  for (const row of rows) {
+    const conv = row.conversations as unknown as { id: string; updated_at: string } | null;
+    if (!conv?.id) continue;
+    const { data: members, error: memErr } = await client()
+      .from("conversation_members")
+      .select(`profile_id, profiles:profile_id(${PROFILE_CARD})`)
+      .eq("conversation_id", conv.id);
+    if (memErr) throw new ApiError(memErr.message, memErr.code);
+    const peerRow = (members ?? []).find((m) => m.profile_id !== userId);
+    const peer = (peerRow?.profiles as unknown as Profile) ?? null;
+    if (!peer) continue;
+    const { data: lastMsgs, error: msgErr } = await client()
+      .from("messages")
+      .select("id, conversation_id, sender_id, body, created_at, read_at")
+      .eq("conversation_id", conv.id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (msgErr) throw new ApiError(msgErr.message, msgErr.code);
+    previews.push({
+      id: conv.id,
+      updated_at: conv.updated_at,
+      peer,
+      lastMessage: (lastMsgs?.[0] as DirectMessage) ?? null,
+    });
+  }
+  return previews.sort(
+    (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+  );
+}
+
+export async function listMessages(
+  conversationId: string,
+  limit = 80
+): Promise<DirectMessage[]> {
+  const { data, error } = await client()
+    .from("messages")
+    .select("id, conversation_id, sender_id, body, created_at, read_at")
+    .eq("conversation_id", conversationId)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? []) as DirectMessage[];
+}
+
+export async function sendMessage(
+  conversationId: string,
+  senderId: string,
+  body: string
+): Promise<DirectMessage> {
+  const text = body.trim();
+  if (!text) throw new ApiError("Message is empty", "validation");
+  const { data, error } = await client()
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      body: text.slice(0, 2000),
+    })
+    .select("id, conversation_id, sender_id, body, created_at, read_at")
+    .single();
+  if (error) throw new ApiError(error.message, error.code);
+  await client()
+    .from("conversations")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("id", conversationId);
+  return data as DirectMessage;
+}
+
+export async function markConversationRead(conversationId: string, userId: string) {
+  const { error } = await client()
+    .from("conversation_members")
+    .update({ last_read_at: new Date().toISOString() })
+    .eq("conversation_id", conversationId)
+    .eq("profile_id", userId);
+  if (error) throw new ApiError(error.message, error.code);
 }

@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { colors, spacing } from "@/lib/theme";
 import {
+  acceptConnection,
   countConnections,
   countFollowers,
+  getConnectionStatus,
+  getOrCreateDm,
   getProfileByUsername,
   listBoatsForUser,
   listMyInterests,
@@ -13,7 +16,7 @@ import {
 } from "@/features/profiles/api";
 import { useAuthStore } from "@/features/auth/store";
 import { useRaftOffStore } from "@/features/map/store";
-import type { Boat, Profile } from "@/types/raftoff";
+import type { Boat, ConnectionStatus, Profile } from "@/types/raftoff";
 import { ReportBlockModal } from "@/components/moderation/ReportBlockModal";
 
 export default function PublicProfileScreen() {
@@ -25,7 +28,9 @@ export default function PublicProfileScreen() {
   const [interests, setInterests] = useState<string[]>([]);
   const [counts, setCounts] = useState({ connections: 0, followers: 0 });
   const [loading, setLoading] = useState(true);
-  const [connectState, setConnectState] = useState<"idle" | "requested" | "error">("idle");
+  const [connStatus, setConnStatus] = useState<ConnectionStatus>("none");
+  const [requestId, setRequestId] = useState<string | undefined>();
+  const [actionBusy, setActionBusy] = useState(false);
   const [modOpen, setModOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,25 +45,28 @@ export default function PublicProfileScreen() {
           setError("Profile not found");
           return;
         }
-        const [boats, interestIds, catalog, conn, fol] = await Promise.all([
+        const [boats, interestIds, catalog, conn, fol, status] = await Promise.all([
           listBoatsForUser(p.id),
           listMyInterests(p.id),
           listInterests(),
           countConnections(p.id),
           countFollowers(p.id),
+          me ? getConnectionStatus(me, p.id) : Promise.resolve({ status: "none" as const }),
         ]);
         setBoat(boats.find((b) => b.is_primary) ?? boats[0] ?? null);
         setInterests(
           catalog.filter((i) => interestIds.includes(i.id)).map((i) => i.label)
         );
         setCounts({ connections: conn, followers: fol });
+        setConnStatus(status.status);
+        setRequestId("requestId" in status ? status.requestId : undefined);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
         setLoading(false);
       }
     })();
-  }, [username]);
+  }, [username, me]);
 
   if (loading) {
     return (
@@ -110,24 +118,62 @@ export default function PublicProfileScreen() {
 
       {!isSelf && me ? (
         <View style={styles.actions}>
-          <Pressable
-            style={styles.connect}
-            disabled={connectState === "requested"}
-            onPress={() => {
-              void requestConnection(me, profile.id)
-                .then(() => setConnectState("requested"))
-                .catch(() => setConnectState("error"));
-            }}
-          >
-            <Text style={styles.connectText}>
-              {connectState === "requested" ? "Requested" : "Connect"}
-            </Text>
-          </Pressable>
+          {connStatus === "connected" ? (
+            <Pressable
+              style={styles.connect}
+              disabled={actionBusy}
+              onPress={() => {
+                setActionBusy(true);
+                void getOrCreateDm(profile.id)
+                  .then((id) => router.push(`/messages/${id}` as never))
+                  .catch(() => setError("Could not open chat"))
+                  .finally(() => setActionBusy(false));
+              }}
+            >
+              <Text style={styles.connectText}>{actionBusy ? "…" : "Message"}</Text>
+            </Pressable>
+          ) : connStatus === "pending_out" ? (
+            <View style={[styles.connect, styles.connectMuted]}>
+              <Text style={styles.connectText}>Requested</Text>
+            </View>
+          ) : connStatus === "pending_in" && requestId ? (
+            <Pressable
+              style={styles.connect}
+              disabled={actionBusy}
+              onPress={() => {
+                setActionBusy(true);
+                void acceptConnection(requestId)
+                  .then(() => {
+                    setConnStatus("connected");
+                    setRequestId(undefined);
+                  })
+                  .catch(() => setError("Could not accept"))
+                  .finally(() => setActionBusy(false));
+              }}
+            >
+              <Text style={styles.connectText}>{actionBusy ? "…" : "Accept"}</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={styles.connect}
+              disabled={actionBusy || profile.allow_connection_requests === false}
+              onPress={() => {
+                setActionBusy(true);
+                void requestConnection(me, profile.id)
+                  .then(() => setConnStatus("pending_out"))
+                  .catch(() => setError("Could not send request"))
+                  .finally(() => setActionBusy(false));
+              }}
+            >
+              <Text style={styles.connectText}>{actionBusy ? "…" : "Connect"}</Text>
+            </Pressable>
+          )}
           <Pressable style={styles.more} onPress={() => setModOpen(true)}>
             <Text style={styles.moreText}>•••</Text>
           </Pressable>
         </View>
       ) : null}
+      {error && profile ? <Text style={styles.inlineError}>{error}</Text> : null}
 
       {boat && profile.show_boat !== false ? (
         <View style={styles.card}>
@@ -219,7 +265,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  connectMuted: { backgroundColor: "rgba(255,61,130,0.35)" },
   connectText: { color: "#fff", fontWeight: "800" },
+  inlineError: { color: colors.danger, paddingHorizontal: spacing.lg, marginBottom: 8 },
   more: {
     width: 48,
     borderRadius: 12,

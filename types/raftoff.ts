@@ -121,6 +121,42 @@ export interface ProfilePhoto {
   created_at?: string;
 }
 
+export interface ConnectionRequest {
+  id: string;
+  requester_id: string;
+  recipient_id: string;
+  status: "pending" | "accepted" | "declined" | "cancelled" | string;
+  message?: string | null;
+  created_at?: string;
+  responded_at?: string | null;
+  requester?: Profile;
+  recipient?: Profile;
+}
+
+export type ConnectionStatus =
+  | "self"
+  | "none"
+  | "pending_out"
+  | "pending_in"
+  | "connected";
+
+export interface DirectMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at?: string | null;
+  sender?: Profile;
+}
+
+export interface ConversationPreview {
+  id: string;
+  updated_at: string;
+  peer: Profile;
+  lastMessage?: DirectMessage | null;
+}
+
 export interface CheckIn {
   id: string;
   user_id: string;

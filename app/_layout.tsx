@@ -105,6 +105,18 @@ export default function RootLayout() {
                 name="u/[username]"
                 options={{ title: "Profile", presentation: "card" }}
               />
+              <Stack.Screen
+                name="connections/index"
+                options={{ headerShown: false, presentation: "card" }}
+              />
+              <Stack.Screen
+                name="messages/index"
+                options={{ headerShown: false, presentation: "card" }}
+              />
+              <Stack.Screen
+                name="messages/[id]"
+                options={{ headerShown: false, presentation: "card" }}
+              />
               <Stack.Screen name="admin/index" options={{ title: "Admin" }} />
             </Stack>
           </View>

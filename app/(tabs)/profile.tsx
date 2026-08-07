@@ -145,10 +145,10 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.statsRow}>
-        <View style={styles.stat}>
+        <Pressable style={styles.stat} onPress={() => router.push("/connections" as never)}>
           <Text style={styles.statNum}>{counts.connections}</Text>
           <Text style={styles.statLabel}>Connections</Text>
-        </View>
+        </Pressable>
         <View style={styles.stat}>
           <Text style={styles.statNum}>{counts.followers}</Text>
           <Text style={styles.statLabel}>Followers</Text>
@@ -159,9 +159,14 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      <Pressable style={styles.editBtn} onPress={() => router.push("/profile/edit" as never)}>
-        <Text style={styles.editBtnText}>Edit Profile</Text>
-      </Pressable>
+      <View style={styles.actionRow}>
+        <Pressable style={styles.editBtn} onPress={() => router.push("/profile/edit" as never)}>
+          <Text style={styles.editBtnText}>Edit Profile</Text>
+        </Pressable>
+        <Pressable style={styles.msgBtn} onPress={() => router.push("/messages" as never)}>
+          <Text style={styles.msgBtnText}>Messages</Text>
+        </Pressable>
+      </View>
 
       {completion.percent < 100 ? (
         <View style={styles.completion}>
@@ -438,14 +443,24 @@ const styles = StyleSheet.create({
   stat: { alignItems: "center" },
   statNum: { color: colors.text, fontWeight: "800", fontSize: 18 },
   statLabel: { color: colors.muted, fontSize: 11, marginTop: 2 },
+  actionRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   editBtn: {
+    flex: 1,
     backgroundColor: colors.action,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
-    marginBottom: 12,
   },
   editBtnText: { color: "#fff", fontWeight: "800" },
+  msgBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.action,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  msgBtnText: { color: colors.action, fontWeight: "800" },
   completion: {
     borderWidth: 1,
     borderColor: colors.line,
