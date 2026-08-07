@@ -67,7 +67,7 @@ export default function OnboardingScreen() {
     if (fromName) setUsername(fromName);
   }, [displayName, userTouched]);
 
-  if (!session) return <Redirect href="/(auth)/login" />;
+  if (!session) return <Redirect href={"/(auth)/login" as never} />;
   if (profile?.onboarding_completed) return <Redirect href="/(tabs)/map" />;
 
   const finish = async () => {
