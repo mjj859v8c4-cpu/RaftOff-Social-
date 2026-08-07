@@ -278,35 +278,6 @@ a {
   border-color: rgba(247, 244, 255, 0.5);
 }
 
-/* —— Lakes marquee —— */
-.lakes-band {
-  overflow: hidden;
-  border-block: 1px solid rgba(255, 61, 130, 0.22);
-  background: linear-gradient(90deg, #0a0810, #120e1a 50%, #0a0810);
-  padding: 1.15rem 0;
-}
-
-.lakes-track {
-  display: flex;
-  gap: 2.5rem;
-  width: max-content;
-  animation: marquee 32s linear infinite;
-  padding-inline: 1.5rem;
-}
-
-.lakes-track span {
-  font-family: var(--font-display);
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: rgba(247, 244, 255, 0.72);
-  white-space: nowrap;
-}
-
-.lakes-track span:nth-child(odd) {
-  color: var(--mint);
-}
-
 /* —— Scene —— */
 .scene {
   position: relative;
@@ -469,7 +440,7 @@ a {
   color: var(--foam);
 }
 
-/* —— About / founders —— */
+/* —— About (product) —— */
 .about-hero .hero-photo {
   object-position: 45% center;
 }
@@ -483,9 +454,7 @@ a {
   max-width: none;
 }
 
-.about-story h2,
-.about-founders h2,
-.about-crew h2 {
+.about-story h2 {
   margin: 0 0 1.1rem;
   font-family: var(--font-display);
   font-size: clamp(2.1rem, 4.5vw, 3.1rem);
@@ -505,177 +474,14 @@ a {
   margin-bottom: 0;
 }
 
-.about-founders {
-  padding: 1rem var(--pad) 4rem;
-  background: var(--deep);
-}
-
-.about-crew {
-  padding: 0.5rem var(--pad) 5.5rem;
-  background:
-    radial-gradient(ellipse 60% 45% at 70% 10%, rgba(46, 242, 200, 0.08), transparent 55%),
-    var(--deep);
-}
-
-.about-founders-lede {
-  margin-bottom: 2.5rem;
-  max-width: 38rem;
-}
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.92em;
-  color: var(--mint);
-}
-
-.badge-chip {
-  display: inline-block;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  padding: 0.28rem 0.65rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 61, 130, 0.55);
-  background: rgba(255, 61, 130, 0.14);
-  color: var(--hot-soft);
-  vertical-align: middle;
-  line-height: 1.2;
-}
-
-.badge-chip--creator {
-  border-color: rgba(255, 61, 130, 0.55);
-  background: rgba(255, 61, 130, 0.14);
-  color: var(--hot-soft);
-}
-
-.founder-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0 0 0.85rem;
-}
-
-.founder-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 2.75rem;
-  max-width: 40rem;
-}
-
-.founder-handle {
-  margin: 0 0 0.35rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--mint);
-}
-
-.founder-name {
-  margin: 0 0 0.35rem;
-  font-family: var(--font-display);
-  font-size: clamp(1.75rem, 3.5vw, 2.25rem);
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  color: var(--foam);
-}
-
-.founder-role {
-  margin: 0 0 0.65rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--hot-soft);
-}
-
-.founder-blurb {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 500;
-  color: rgba(247, 244, 255, 0.72);
-  max-width: 28rem;
-}
-
-.crew-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 2.75rem;
-  max-width: 44rem;
-}
-
-.crew-figure {
-  margin: 0 0 1.1rem;
-  position: relative;
-  width: min(100%, 280px);
-}
-
-.crew-figure::after {
-  content: "";
-  position: absolute;
-  inset: auto -8% -10% 8%;
-  height: 40%;
-  background: radial-gradient(ellipse at center, rgba(46, 242, 200, 0.22), transparent 70%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.crew-photo {
-  position: relative;
-  z-index: 1;
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  object-position: center 18%;
-  border-radius: 2px;
-  filter: saturate(1.08) contrast(1.05);
-  box-shadow:
-    0 0 0 1px rgba(247, 244, 255, 0.08),
-    0 22px 56px rgba(0, 0, 0, 0.42);
-  transition: transform 0.45s var(--ease), box-shadow 0.45s var(--ease);
-}
-
-.crew-list li:hover .crew-photo {
-  transform: translateY(-4px) scale(1.015);
-  box-shadow:
-    0 0 0 1px rgba(46, 242, 200, 0.2),
-    0 28px 64px rgba(0, 0, 0, 0.5);
-}
-
 .reveal {
   animation: rise-in 0.9s var(--ease) both;
 }
 
-.about-founders.reveal {
-  animation-delay: 0.06s;
-}
-
-.about-crew.reveal {
-  animation-delay: 0.12s;
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .reveal,
-  .crew-list li:hover .crew-photo {
+  .reveal {
     animation: none;
     transform: none;
-  }
-}
-
-@media (min-width: 768px) {
-  .founder-list,
-  .crew-list {
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem 4.5rem;
-    max-width: 52rem;
-  }
-
-  .crew-figure {
-    width: min(100%, 320px);
   }
 }
 
@@ -708,15 +514,6 @@ a {
   50% {
     background-position: 0% 0;
     opacity: 1;
-  }
-}
-
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
   }
 }
 
@@ -762,12 +559,5 @@ a {
 
   .hero-photo {
     transform: none;
-  }
-
-  .lakes-track {
-    transform: none;
-    flex-wrap: wrap;
-    width: auto;
-    justify-content: center;
   }
 }
