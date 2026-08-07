@@ -33,6 +33,43 @@ const PROFILE_SELECT = `
 const PROFILE_CARD =
   "id, username, display_name, avatar_url, bio, home_city, home_lake_id, is_verified, badges";
 
+/** Clean handle from an email local-part (no uuid suffix). */
+export function suggestUsernameFromEmail(email?: string | null): string {
+  const local = (email ?? "").split("@")[0] ?? "";
+  return local.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 24) || "";
+}
+
+/** Clean handle from a display name. */
+export function suggestUsernameFromDisplayName(name?: string | null): string {
+  return (name ?? "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "")
+    .slice(0, 24);
+}
+
+async function resolveDefaultHomeLakeId(): Promise<string | null> {
+  const { data, error } = await client()
+    .from("lakes")
+    .select("id")
+    .eq("slug", "lake-st-clair")
+    .maybeSingle();
+  if (error || !data?.id) return null;
+  return data.id as string;
+}
+
+async function allocateUsername(preferred: string, userId: string): Promise<string> {
+  const base = preferred.slice(0, 24) || "boater";
+  const { data: taken } = await client()
+    .from("profiles")
+    .select("id")
+    .eq("username", base)
+    .maybeSingle();
+  if (!taken || taken.id === userId) return base;
+  return `${base}_${userId.replace(/-/g, "").slice(0, 6)}`.slice(0, 30);
+}
+
 /** Ensure a profiles row exists for the signed-in user (covers race / missing trigger). */
 export async function ensureMyProfile(input?: {
   displayName?: string;
@@ -51,17 +88,35 @@ export async function ensureMyProfile(input?: {
     .eq("id", user.id)
     .maybeSingle();
   if (existing.error) throw new ApiError(existing.error.message, existing.error.code);
-  if (existing.data) return existing.data as Profile;
+  if (existing.data) {
+    // Backfill Lake St. Clair when profile exists without a home lake.
+    const row = existing.data as Profile;
+    if (!row.home_lake_id) {
+      const lakeId = await resolveDefaultHomeLakeId();
+      if (lakeId) {
+        const patched = await sb
+          .from("profiles")
+          .update({ home_lake_id: lakeId, updated_at: new Date().toISOString() })
+          .eq("id", user.id)
+          .select(PROFILE_SELECT)
+          .single();
+        if (!patched.error && patched.data) return patched.data as Profile;
+      }
+    }
+    return row;
+  }
 
   const base =
-    (user.email?.split("@")[0] ?? "boater").toLowerCase().replace(/[^a-z0-9_]/g, "") ||
+    suggestUsernameFromEmail(user.email) ||
+    suggestUsernameFromDisplayName(input?.displayName) ||
     "boater";
-  const username = `${base}_${user.id.replace(/-/g, "").slice(0, 6)}`;
+  const username = await allocateUsername(base, user.id);
   const display =
     input?.displayName?.trim() ||
     (user.user_metadata?.display_name as string | undefined) ||
     base ||
     "Boater";
+  const homeLakeId = await resolveDefaultHomeLakeId();
 
   const { data, error } = await sb
     .from("profiles")
@@ -74,6 +129,7 @@ export async function ensureMyProfile(input?: {
         role: "user",
         badges: ["founding-member"],
         onboarding_completed: false,
+        home_lake_id: homeLakeId,
       },
       { onConflict: "id" }
     )

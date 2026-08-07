@@ -47,13 +47,29 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     const root = String(segments[0] ?? "");
+    const second = String(segments[1] ?? "");
     const inAuthGroup = root.includes("auth");
+    const onOnboarding = inAuthGroup && second.includes("onboarding");
+    const onLogin = inAuthGroup && (second.includes("login") || second === "");
+    const needsOnboarding = !!session && profile != null && !profile.onboarding_completed;
+
     if (!session && !inAuthGroup && isSupabaseConfigured) {
       router.replace("/(auth)/login" as never);
-    } else if (session && inAuthGroup) {
-      router.replace("/(tabs)/map" as never);
+      return;
     }
-  }, [ready, session, segments, router]);
+    if (!session) return;
+
+    // First-time users: lightweight setup before (or instead of) bouncing to map.
+    if (needsOnboarding && !onOnboarding) {
+      router.replace("/(auth)/onboarding" as never);
+      return;
+    }
+    if (session && onLogin) {
+      router.replace(
+        (needsOnboarding ? "/(auth)/onboarding" : "/(tabs)/map") as never
+      );
+    }
+  }, [ready, session, profile, segments, router]);
 
   if (!ready) return <LoadingState label="Starting RaftOff…" />;
   return <>{children}</>;
@@ -93,6 +109,7 @@ export default function RootLayout() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/login" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/onboarding" options={{ headerShown: false }} />
               <Stack.Screen
                 name="locations/[locationId]"
                 options={{ title: "Location feed", presentation: "card" }}

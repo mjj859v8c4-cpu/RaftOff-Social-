@@ -170,17 +170,22 @@ export default function ProfileScreen() {
       </View>
 
       {completion.percent < 100 ? (
-        <View style={styles.completion}>
-          <Text style={styles.completionTitle}>Your RaftOff profile · {completion.percent}%</Text>
+        <Pressable style={styles.completion} onPress={() => router.push("/profile/edit" as never)}>
+          <Text style={styles.completionTitle}>
+            Optional polish · {completion.percent}%
+          </Text>
           <View style={styles.barTrack}>
             <View style={[styles.barFill, { width: `${completion.percent}%` }]} />
           </View>
-          {completion.missing.slice(0, 2).map((m) => (
+          <Text style={styles.completionHint}>
+            You’re good to explore — add more whenever you want.
+          </Text>
+          {completion.missing.slice(0, 1).map((m) => (
             <Text key={m} style={styles.completionHint}>
               ○ {m}
             </Text>
           ))}
-        </View>
+        </Pressable>
       ) : null}
 
       {primaryBoat ? (

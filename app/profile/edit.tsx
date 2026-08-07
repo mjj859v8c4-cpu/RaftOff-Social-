@@ -54,6 +54,8 @@ export default function EditProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [showMoreAbout, setShowMoreAbout] = useState(false);
+  const [showWaterLife, setShowWaterLife] = useState(false);
 
   useEffect(() => {
     if (!userId || !authProfile) return;
@@ -62,10 +64,19 @@ export default function EditProfileScreen() {
     setBio(authProfile.bio ?? "");
     setHomeCity(authProfile.home_city ?? "");
     setHomeMarina(authProfile.home_marina ?? "");
-    setHomeLakeId(authProfile.home_lake_id);
+    const defaultLake =
+      authProfile.home_lake_id ??
+      lakes.find((l) => l.slug === "lake-st-clair")?.id ??
+      lakes[0]?.id ??
+      null;
+    setHomeLakeId(defaultLake);
     setAvatarUrl(authProfile.avatar_url ?? null);
     setCoverUrl(authProfile.cover_url ?? null);
     setIdentityTags(authProfile.identity_tags ?? []);
+    // Open optional sections if they already have content
+    if (authProfile.bio || authProfile.home_city || authProfile.cover_url) {
+      setShowMoreAbout(true);
+    }
     void (async () => {
       try {
         const [tags, ints, mine, myBoats] = await Promise.all([
@@ -84,6 +95,9 @@ export default function EditProfileScreen() {
           setBoatMake(primary.manufacturer ?? primary.make ?? "");
           setBoatModel(primary.model ?? "");
           setBoatType(primary.boat_type ?? "");
+          setShowWaterLife(true);
+        } else if (mine.length || (authProfile.identity_tags?.length ?? 0) > 0) {
+          setShowWaterLife(true);
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load profile");
@@ -91,7 +105,7 @@ export default function EditProfileScreen() {
         setLoaded(true);
       }
     })();
-  }, [userId, authProfile]);
+  }, [userId, authProfile, lakes]);
 
   const uploadProfileImage = useCallback(
     async (kind: "avatar" | "cover") => {
@@ -171,7 +185,12 @@ export default function EditProfileScreen() {
       await refreshProfile();
       router.back();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      const msg = e instanceof Error ? e.message : "Save failed";
+      if (msg.toLowerCase().includes("unique") || msg.toLowerCase().includes("duplicate")) {
+        setError("That username is taken — try another.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -218,22 +237,9 @@ export default function EditProfileScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Text style={styles.section}>Photos</Text>
-        <Pressable
-          style={styles.coverTap}
-          onPress={() => void uploadProfileImage("cover")}
-          disabled={!!uploadingKind}
-        >
-          {coverUrl ? (
-            <Image source={{ uri: coverUrl }} style={styles.coverImg} />
-          ) : (
-            <View style={styles.coverEmpty}>
-              <Text style={styles.photoHint}>
-                {uploadingKind === "cover" ? "Uploading cover…" : "Tap to add cover photo"}
-              </Text>
-            </View>
-          )}
-        </Pressable>
+        <Text style={styles.section}>Essentials</Text>
+        <Text style={styles.sectionSub}>Name, handle, and home lake — everything else is optional.</Text>
+
         <View style={styles.avatarRow}>
           <Pressable
             style={styles.avatarTap}
@@ -257,22 +263,13 @@ export default function EditProfileScreen() {
               disabled={!!uploadingKind}
             >
               <Text style={styles.photoBtnText}>
-                {uploadingKind === "avatar" ? "Uploading…" : "Change profile photo"}
+                {uploadingKind === "avatar" ? "Uploading…" : "Add photo (optional)"}
               </Text>
             </Pressable>
-            <Pressable
-              style={styles.photoBtnGhost}
-              onPress={() => void uploadProfileImage("cover")}
-              disabled={!!uploadingKind}
-            >
-              <Text style={styles.photoBtnGhostText}>
-                {uploadingKind === "cover" ? "Uploading…" : "Change cover"}
-              </Text>
-            </Pressable>
+            <Text style={styles.photoNote}>Skip anytime — you can explore without one.</Text>
           </View>
         </View>
 
-        <Text style={styles.section}>Profile</Text>
         <Text style={styles.label}>Display name</Text>
         <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} />
         <Text style={styles.label}>Username</Text>
@@ -280,38 +277,14 @@ export default function EditProfileScreen() {
           style={styles.input}
           autoCapitalize="none"
           value={username}
-          onChangeText={setUsername}
+          onChangeText={(t) =>
+            setUsername(t.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 30))
+          }
           placeholder="coreyonthewater"
           placeholderTextColor={colors.muted}
         />
-        <Text style={styles.label}>Bio</Text>
-        <TextInput
-          style={[styles.input, styles.bio]}
-          multiline
-          value={bio}
-          onChangeText={setBio}
-          placeholder="Usually somewhere between Strawberry Island and Muscamoot."
-          placeholderTextColor={colors.muted}
-          maxLength={240}
-        />
-        <Text style={styles.label}>Home city / area</Text>
-        <TextInput
-          style={styles.input}
-          value={homeCity}
-          onChangeText={setHomeCity}
-          placeholder="St. Clair Shores, MI"
-          placeholderTextColor={colors.muted}
-        />
-        <Text style={styles.label}>Home marina (optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={homeMarina}
-          onChangeText={setHomeMarina}
-          placeholder="Belle Maer Harbor"
-          placeholderTextColor={colors.muted}
-        />
 
-        <Text style={styles.section}>Home lake</Text>
+        <Text style={styles.label}>Home lake</Text>
         <View style={styles.wrapChips}>
           {lakes.map((l) => {
             const on = homeLakeId === l.id;
@@ -327,71 +300,140 @@ export default function EditProfileScreen() {
           })}
         </View>
 
-        <Text style={styles.section}>My water life</Text>
-        <View style={styles.wrapChips}>
-          {identityCatalog.map((t) => {
-            const on = identityTags.includes(t.id);
-            return (
-              <Pressable
-                key={t.id}
-                style={[styles.chip, on && styles.chipOn]}
-                onPress={() => toggleTag(t.id)}
-              >
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>{t.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Pressable style={styles.disclose} onPress={() => setShowMoreAbout((v) => !v)}>
+          <Text style={styles.discloseText}>
+            {showMoreAbout ? "Hide" : "Add"} bio & location{" "}
+            <Text style={styles.optional}>optional</Text>
+          </Text>
+          <Text style={styles.discloseChevron}>{showMoreAbout ? "▴" : "▾"}</Text>
+        </Pressable>
+        {showMoreAbout ? (
+          <View style={styles.discloseBody}>
+            <Text style={styles.label}>
+              Cover photo <Text style={styles.optional}>optional</Text>
+            </Text>
+            <Pressable
+              style={styles.coverTap}
+              onPress={() => void uploadProfileImage("cover")}
+              disabled={!!uploadingKind}
+            >
+              {coverUrl ? (
+                <Image source={{ uri: coverUrl }} style={styles.coverImg} />
+              ) : (
+                <View style={styles.coverEmpty}>
+                  <Text style={styles.photoHint}>
+                    {uploadingKind === "cover" ? "Uploading cover…" : "Tap to add cover"}
+                  </Text>
+                </View>
+              )}
+            </Pressable>
+            <Text style={styles.label}>
+              Bio <Text style={styles.optional}>optional</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, styles.bio]}
+              multiline
+              value={bio}
+              onChangeText={setBio}
+              placeholder="Usually somewhere between Strawberry Island and Muscamoot."
+              placeholderTextColor={colors.muted}
+              maxLength={240}
+            />
+            <Text style={styles.label}>
+              Home city / area <Text style={styles.optional}>optional</Text>
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={homeCity}
+              onChangeText={setHomeCity}
+              placeholder="St. Clair Shores, MI"
+              placeholderTextColor={colors.muted}
+            />
+            <Text style={styles.label}>
+              Home marina <Text style={styles.optional}>optional</Text>
+            </Text>
+            <TextInput
+              style={styles.input}
+              value={homeMarina}
+              onChangeText={setHomeMarina}
+              placeholder="Belle Maer Harbor"
+              placeholderTextColor={colors.muted}
+            />
+          </View>
+        ) : null}
 
-        <Text style={styles.section}>Interests</Text>
-        <View style={styles.wrapChips}>
-          {interests.map((i) => {
-            const on = selectedInterests.includes(i.id);
-            return (
-              <Pressable
-                key={i.id}
-                style={[styles.chip, on && styles.chipOn]}
-                onPress={() => toggleInterest(i.id)}
-              >
-                <Text style={[styles.chipText, on && styles.chipTextOn]}>{i.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <Pressable style={styles.disclose} onPress={() => setShowWaterLife((v) => !v)}>
+          <Text style={styles.discloseText}>
+            {showWaterLife ? "Hide" : "Add"} interests & boat{" "}
+            <Text style={styles.optional}>optional</Text>
+          </Text>
+          <Text style={styles.discloseChevron}>{showWaterLife ? "▴" : "▾"}</Text>
+        </Pressable>
+        {showWaterLife ? (
+          <View style={styles.discloseBody}>
+            <Text style={styles.label}>My water life</Text>
+            <View style={styles.wrapChips}>
+              {identityCatalog.map((t) => {
+                const on = identityTags.includes(t.id);
+                return (
+                  <Pressable
+                    key={t.id}
+                    style={[styles.chip, on && styles.chipOn]}
+                    onPress={() => toggleTag(t.id)}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{t.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
 
-        <Text style={styles.section}>Primary boat (optional)</Text>
-        <Text style={styles.label}>Boat name / nickname</Text>
-        <TextInput
-          style={styles.input}
-          value={boatName}
-          onChangeText={setBoatName}
-          placeholder="Lake Therapy"
-          placeholderTextColor={colors.muted}
-        />
-        <Text style={styles.label}>Manufacturer</Text>
-        <TextInput
-          style={styles.input}
-          value={boatMake}
-          onChangeText={setBoatMake}
-          placeholder="Sea Ray"
-          placeholderTextColor={colors.muted}
-        />
-        <Text style={styles.label}>Model</Text>
-        <TextInput
-          style={styles.input}
-          value={boatModel}
-          onChangeText={setBoatModel}
-          placeholder="250 SLX"
-          placeholderTextColor={colors.muted}
-        />
-        <Text style={styles.label}>Type</Text>
-        <TextInput
-          style={styles.input}
-          value={boatType}
-          onChangeText={setBoatType}
-          placeholder="Bowrider / Cruiser / Pontoon…"
-          placeholderTextColor={colors.muted}
-        />
+            <Text style={styles.label}>Interests</Text>
+            <View style={styles.wrapChips}>
+              {interests.map((i) => {
+                const on = selectedInterests.includes(i.id);
+                return (
+                  <Pressable
+                    key={i.id}
+                    style={[styles.chip, on && styles.chipOn]}
+                    onPress={() => toggleInterest(i.id)}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>{i.label}</Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Text style={styles.label}>Primary boat</Text>
+            <TextInput
+              style={styles.input}
+              value={boatName}
+              onChangeText={setBoatName}
+              placeholder="Boat name / nickname"
+              placeholderTextColor={colors.muted}
+            />
+            <TextInput
+              style={styles.input}
+              value={boatMake}
+              onChangeText={setBoatMake}
+              placeholder="Manufacturer"
+              placeholderTextColor={colors.muted}
+            />
+            <TextInput
+              style={styles.input}
+              value={boatModel}
+              onChangeText={setBoatModel}
+              placeholder="Model"
+              placeholderTextColor={colors.muted}
+            />
+            <TextInput
+              style={styles.input}
+              value={boatType}
+              onChangeText={setBoatType}
+              placeholder="Bowrider / Cruiser / Pontoon…"
+              placeholderTextColor={colors.muted}
+            />
+          </View>
+        ) : null}
 
         <Text style={styles.hint}>
           Never share registration numbers or exact dock slips. Profiles are for connecting on the
@@ -425,9 +467,26 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontWeight: "800",
     fontSize: 15,
-    marginTop: 18,
-    marginBottom: 6,
+    marginTop: 8,
+    marginBottom: 2,
   },
+  sectionSub: { color: colors.muted, fontSize: 12, marginBottom: 8, lineHeight: 17 },
+  optional: { color: colors.muted, fontWeight: "600", fontSize: 11 },
+  disclose: {
+    marginTop: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "rgba(18,32,51,0.6)",
+  },
+  discloseText: { color: colors.text, fontWeight: "700", fontSize: 14 },
+  discloseChevron: { color: colors.muted, fontSize: 14 },
+  discloseBody: { marginTop: 4, gap: 2 },
   coverTap: {
     borderRadius: 14,
     overflow: "hidden",
@@ -437,13 +496,13 @@ const styles = StyleSheet.create({
   },
   coverImg: { width: "100%", height: 120 },
   coverEmpty: {
-    height: 120,
+    height: 100,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(46,242,200,0.08)",
   },
   photoHint: { color: colors.muted, fontWeight: "700", fontSize: 13 },
-  avatarRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 12 },
+  avatarRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 8 },
   avatarTap: { borderRadius: 40 },
   avatarImg: {
     width: 80,
@@ -469,14 +528,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   photoBtnText: { color: "#fff", fontWeight: "800", fontSize: 13 },
-  photoBtnGhost: {
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  photoBtnGhostText: { color: colors.text, fontWeight: "700", fontSize: 13 },
+  photoNote: { color: colors.muted, fontSize: 11, lineHeight: 15 },
   label: { color: colors.muted, fontSize: 12, fontWeight: "600", marginTop: 8 },
   input: {
     borderWidth: 1,
