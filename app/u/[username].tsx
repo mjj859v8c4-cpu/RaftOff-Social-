@@ -1,24 +1,41 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { colors, spacing } from "@/lib/theme";
 import {
   acceptConnection,
   countConnections,
   countFollowers,
+  countFollowing,
+  followProfile,
+  getActiveStatus,
   getConnectionStatus,
   getOrCreateDm,
   getProfileByUsername,
+  isFollowing as checkIsFollowing,
   listBoatsForUser,
   listMyInterests,
   listInterests,
+  listProfilePhotos,
   requestConnection,
+  unfollowProfile,
 } from "@/features/profiles/api";
 import { useAuthStore } from "@/features/auth/store";
 import { useRaftOffStore } from "@/features/map/store";
-import type { Boat, ConnectionStatus, Profile } from "@/types/raftoff";
+import type { Boat, ConnectionStatus, Profile, ProfilePhoto, UserStatus } from "@/types/raftoff";
 import { ReportBlockModal } from "@/components/moderation/ReportBlockModal";
 import { ProfileBadges } from "@/components/profile/ProfileBadges";
+import { PhotoGallery } from "@/components/profile/PhotoGallery";
+import { track } from "@/lib/analytics";
 
 export default function PublicProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -27,11 +44,15 @@ export default function PublicProfileScreen() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [boat, setBoat] = useState<Boat | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
-  const [counts, setCounts] = useState({ connections: 0, followers: 0 });
+  const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
+  const [activeStatus, setActiveStatus] = useState<UserStatus | null>(null);
+  const [counts, setCounts] = useState({ connections: 0, followers: 0, following: 0 });
   const [loading, setLoading] = useState(true);
   const [connStatus, setConnStatus] = useState<ConnectionStatus>("none");
   const [requestId, setRequestId] = useState<string | undefined>();
   const [actionBusy, setActionBusy] = useState(false);
+  const [following, setFollowing] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
   const [modOpen, setModOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,21 +67,39 @@ export default function PublicProfileScreen() {
           setError("Profile not found");
           return;
         }
-        const [boats, interestIds, catalog, conn, fol, status] = await Promise.all([
+        const [
+          boats,
+          interestIds,
+          catalog,
+          conn,
+          fol,
+          followingCount,
+          connectionStatus,
+          iFollow,
+          galleryPhotos,
+          personStatus,
+        ] = await Promise.all([
           listBoatsForUser(p.id),
           listMyInterests(p.id),
           listInterests(),
           countConnections(p.id),
           countFollowers(p.id),
+          countFollowing(p.id),
           me ? getConnectionStatus(me, p.id) : Promise.resolve({ status: "none" as const }),
+          me && me !== p.id ? checkIsFollowing(me, p.id).catch(() => false) : Promise.resolve(false),
+          listProfilePhotos(p.id).catch(() => [] as ProfilePhoto[]),
+          getActiveStatus(p.id).catch(() => null),
         ]);
         setBoat(boats.find((b) => b.is_primary) ?? boats[0] ?? null);
         setInterests(
           catalog.filter((i) => interestIds.includes(i.id)).map((i) => i.label)
         );
-        setCounts({ connections: conn, followers: fol });
-        setConnStatus(status.status);
-        setRequestId("requestId" in status ? status.requestId : undefined);
+        setPhotos(galleryPhotos);
+        setCounts({ connections: conn, followers: fol, following: followingCount });
+        setConnStatus(connectionStatus.status);
+        setRequestId("requestId" in connectionStatus ? connectionStatus.requestId : undefined);
+        setFollowing(iFollow);
+        setActiveStatus(personStatus);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -112,14 +151,38 @@ export default function PublicProfileScreen() {
         <Text style={styles.handle}>@{profile.username}</Text>
         <ProfileBadges badges={profile.badges} />
         <Text style={styles.lake}>📍 {lakeName}</Text>
+        {activeStatus ? (
+          <View style={styles.statusPill}>
+            <Text style={styles.statusPillText}>💬 {activeStatus.body}</Text>
+          </View>
+        ) : null}
         {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
         <Text style={styles.stats}>
-          {counts.connections} Connections · {counts.followers} Followers
+          {counts.connections} Connections · {counts.followers} Followers · {counts.following} Following
         </Text>
       </View>
 
       {!isSelf && me ? (
         <View style={styles.actions}>
+          <Pressable
+            style={[styles.followBtn, following && styles.followBtnOn]}
+            disabled={followBusy}
+            onPress={() => {
+              setFollowBusy(true);
+              const next = !following;
+              void (next ? followProfile(profile.id) : unfollowProfile(profile.id))
+                .then(() => {
+                  setFollowing(next);
+                  setCounts((c) => ({ ...c, followers: c.followers + (next ? 1 : -1) }));
+                })
+                .catch(() => setError(next ? "Could not follow" : "Could not unfollow"))
+                .finally(() => setFollowBusy(false));
+            }}
+          >
+            <Text style={[styles.followBtnText, following && styles.followBtnTextOn]}>
+              {followBusy ? "…" : following ? "Following" : "Follow"}
+            </Text>
+          </Pressable>
           {connStatus === "connected" ? (
             <Pressable
               style={styles.connect}
@@ -175,6 +238,16 @@ export default function PublicProfileScreen() {
           </Pressable>
         </View>
       ) : null}
+      {isSelf ? (
+        <View style={styles.actions}>
+          <Pressable
+            style={styles.connect}
+            onPress={() => router.push("/profile/edit" as never)}
+          >
+            <Text style={styles.connectText}>Edit Profile</Text>
+          </Pressable>
+        </View>
+      ) : null}
       {error && profile ? <Text style={styles.inlineError}>{error}</Text> : null}
 
       {boat && profile.show_boat !== false ? (
@@ -213,9 +286,23 @@ export default function PublicProfileScreen() {
         </View>
       ) : null}
 
-      <Text style={styles.share}>
-        Share: raftoffsocial.com/u/{profile.username}
-      </Text>
+      {photos.length ? (
+        <View style={styles.card}>
+          <Text style={styles.kicker}>Gallery</Text>
+          <PhotoGallery photos={photos} />
+        </View>
+      ) : null}
+
+      <Pressable
+        style={styles.shareRow}
+        onPress={() => {
+          const url = `https://raftoffsocial.com/u/${profile.username}`;
+          track("share_intent", { target: "public_profile" });
+          void Share.share({ message: `Check out ${profile.display_name} on RaftOff: ${url}`, url });
+        }}
+      >
+        <Text style={styles.share}>Share profile · raftoffsocial.com/u/{profile.username} ↗</Text>
+      </Pressable>
 
       <ReportBlockModal
         visible={modOpen}
@@ -257,6 +344,17 @@ const styles = StyleSheet.create({
   name: { color: colors.text, fontSize: 24, fontWeight: "800" },
   handle: { color: colors.muted, marginTop: 2 },
   lake: { color: colors.active, marginTop: 8, fontWeight: "600" },
+  statusPill: {
+    alignSelf: "flex-start",
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(46,242,200,0.35)",
+    backgroundColor: "rgba(46,242,200,0.1)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusPillText: { color: colors.text, fontSize: 13, fontWeight: "600" },
   bio: { color: colors.muted, marginTop: 10, lineHeight: 20 },
   stats: { color: colors.text, marginTop: 12, fontWeight: "700" },
   actions: { flexDirection: "row", gap: 10, paddingHorizontal: spacing.lg, marginBottom: 12 },
@@ -269,6 +367,17 @@ const styles = StyleSheet.create({
   },
   connectMuted: { backgroundColor: "rgba(255,61,130,0.35)" },
   connectText: { color: "#fff", fontWeight: "800" },
+  followBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  followBtnOn: { borderColor: "rgba(46,242,200,0.4)", backgroundColor: "rgba(46,242,200,0.1)" },
+  followBtnText: { color: colors.text, fontWeight: "800" },
+  followBtnTextOn: { color: colors.active },
   inlineError: { color: colors.danger, paddingHorizontal: spacing.lg, marginBottom: 8 },
   more: {
     width: 48,
@@ -309,5 +418,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
   },
-  share: { color: colors.muted, fontSize: 12, padding: spacing.lg },
+  shareRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  share: { color: colors.active, fontSize: 12, fontWeight: "700" },
 });

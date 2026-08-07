@@ -12,6 +12,7 @@ import type {
   Interest,
   Profile,
   ProfilePhoto,
+  UserStatus,
 } from "@/types/raftoff";
 
 function client() {
@@ -338,6 +339,22 @@ export async function deleteProfilePhoto(photoId: string, profileId: string) {
   if (error) throw new ApiError(error.message, error.code);
 }
 
+/** Persist a new left-to-right gallery order after a move-left / move-right. */
+export async function reorderProfilePhotos(profileId: string, orderedIds: string[]) {
+  const sb = client();
+  const results = await Promise.all(
+    orderedIds.map((id, index) =>
+      sb
+        .from("profile_photos")
+        .update({ sort_order: index })
+        .eq("id", id)
+        .eq("profile_id", profileId)
+    )
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) throw new ApiError(failed.error.message, failed.error.code);
+}
+
 export function profileCompletion(profile: Profile, opts: {
   hasBoat: boolean;
   interestCount: number;
@@ -358,6 +375,78 @@ export function profileCompletion(profile: Profile, opts: {
     percent: Math.round((done / checks.length) * 100),
     missing: checks.filter((c) => !c.ok).map((c) => c.label),
   };
+}
+
+/** Temporary statuses (~24h) — one active status per profile (§40). */
+export async function setMyStatus(
+  body: string,
+  opts: { hours?: number; locationId?: string | null } = {}
+): Promise<UserStatus> {
+  const { data, error } = await client().rpc("set_my_status", {
+    p_body: body,
+    p_hours: opts.hours ?? 24,
+    p_location_id: opts.locationId ?? null,
+  });
+  if (error) throw new ApiError(error.message, error.code);
+  return data as UserStatus;
+}
+
+export async function clearMyStatus() {
+  const { error } = await client().rpc("clear_my_status");
+  if (error) throw new ApiError(error.message, error.code);
+}
+
+export async function getActiveStatus(profileId: string): Promise<UserStatus | null> {
+  const { data, error } = await client()
+    .from("user_statuses")
+    .select("id, profile_id, lake_id, location_id, body, expires_at, created_at")
+    .eq("profile_id", profileId)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new ApiError(error.message, error.code);
+  return (data as UserStatus) ?? null;
+}
+
+/** Active statuses keyed by profile id — used on connections list / mini-profile. */
+export async function listActiveStatuses(
+  profileIds: string[]
+): Promise<Record<string, UserStatus>> {
+  if (!profileIds.length) return {};
+  const { data, error } = await client()
+    .from("user_statuses")
+    .select("id, profile_id, lake_id, location_id, body, expires_at, created_at")
+    .in("profile_id", profileIds)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false });
+  if (error) throw new ApiError(error.message, error.code);
+  const byProfile: Record<string, UserStatus> = {};
+  for (const row of (data ?? []) as UserStatus[]) {
+    if (!byProfile[row.profile_id]) byProfile[row.profile_id] = row;
+  }
+  return byProfile;
+}
+
+/** Bundle used by the map's mini-profile modal — name, boat, interests in one call. */
+export async function getMiniProfile(profileId: string): Promise<{
+  profile: Profile | null;
+  boat: Boat | null;
+  interestLabels: string[];
+  status: UserStatus | null;
+}> {
+  const [profile, boats, myInterestIds, catalog, status] = await Promise.all([
+    getFullProfile(profileId),
+    listBoatsForUser(profileId),
+    listMyInterests(profileId),
+    listInterests(),
+    getActiveStatus(profileId).catch(() => null),
+  ]);
+  const boat = boats.find((b: Boat) => b.is_primary) ?? boats[0] ?? null;
+  const interestLabels = catalog
+    .filter((i: Interest) => myInterestIds.includes(i.id))
+    .map((i: Interest) => i.label);
+  return { profile, boat, interestLabels, status };
 }
 
 /** Connections */
@@ -432,6 +521,47 @@ export async function countFollowing(profileId: string): Promise<number> {
   return count ?? 0;
 }
 
+/** Followers (§7) */
+export async function isFollowing(meId: string, targetId: string): Promise<boolean> {
+  const { data, error } = await client()
+    .from("follows")
+    .select("follower_id")
+    .eq("follower_id", meId)
+    .eq("following_id", targetId)
+    .maybeSingle();
+  if (error) throw new ApiError(error.message, error.code);
+  return !!data;
+}
+
+export async function followProfile(targetId: string) {
+  const { error } = await client().rpc("follow_profile", { target: targetId });
+  if (error) throw new ApiError(error.message, error.code);
+}
+
+export async function unfollowProfile(targetId: string) {
+  const { error } = await client().rpc("unfollow_profile", { target: targetId });
+  if (error) throw new ApiError(error.message, error.code);
+}
+
+/** Remove an existing connection (either side can unlink). */
+export async function removeConnection(meId: string, otherId: string) {
+  const a = meId < otherId ? meId : otherId;
+  const b = meId < otherId ? otherId : meId;
+  const { error } = await client()
+    .from("connections")
+    .delete()
+    .eq("profile_a", a)
+    .eq("profile_b", b);
+  if (error) throw new ApiError(error.message, error.code);
+}
+
+/** Count of mutual connections shared with another profile (Connections list UX). */
+export async function mutualConnectionCount(otherId: string): Promise<number> {
+  const { data, error } = await client().rpc("mutual_connection_count", { other: otherId });
+  if (error) throw new ApiError(error.message, error.code);
+  return (data as number) ?? 0;
+}
+
 export async function searchProfiles(query: string, limit = 20): Promise<Profile[]> {
   const q = query.trim().replace(/%/g, "");
   if (!q) return [];
@@ -484,6 +614,54 @@ export async function getConnectionStatus(
   if (out.data) return { status: "pending_out", requestId: out.data.id as string };
   if (inn.data) return { status: "pending_in", requestId: inn.data.id as string };
   return { status: "none" };
+}
+
+/** Batch connection-status lookup, used by discovery lists to avoid N+1 queries. */
+export async function getConnectionStatuses(
+  meId: string,
+  otherIds: string[]
+): Promise<Record<string, { status: ConnectionStatus; requestId?: string }>> {
+  const ids = Array.from(new Set(otherIds.filter((id) => id && id !== meId)));
+  const result: Record<string, { status: ConnectionStatus; requestId?: string }> = {};
+  if (!ids.length) return result;
+
+  const idList = ids.join(",");
+  const [connRes, reqRes] = await Promise.all([
+    client()
+      .from("connections")
+      .select("profile_a, profile_b")
+      .or(
+        `and(profile_a.eq.${meId},profile_b.in.(${idList})),and(profile_b.eq.${meId},profile_a.in.(${idList}))`
+      ),
+    client()
+      .from("connection_requests")
+      .select("id, requester_id, recipient_id")
+      .eq("status", "pending")
+      .or(
+        `and(requester_id.eq.${meId},recipient_id.in.(${idList})),and(recipient_id.eq.${meId},requester_id.in.(${idList}))`
+      ),
+  ]);
+  if (connRes.error) throw new ApiError(connRes.error.message, connRes.error.code);
+  if (reqRes.error) throw new ApiError(reqRes.error.message, reqRes.error.code);
+
+  for (const row of connRes.data ?? []) {
+    const other = row.profile_a === meId ? (row.profile_b as string) : (row.profile_a as string);
+    result[other] = { status: "connected" };
+  }
+  for (const row of reqRes.data ?? []) {
+    const requesterId = row.requester_id as string;
+    const recipientId = row.recipient_id as string;
+    const other = requesterId === meId ? recipientId : requesterId;
+    if (result[other]) continue;
+    result[other] =
+      requesterId === meId
+        ? { status: "pending_out", requestId: row.id as string }
+        : { status: "pending_in", requestId: row.id as string };
+  }
+  for (const id of ids) {
+    if (!result[id]) result[id] = { status: "none" };
+  }
+  return result;
 }
 
 export async function listIncomingRequests(userId: string): Promise<ConnectionRequest[]> {

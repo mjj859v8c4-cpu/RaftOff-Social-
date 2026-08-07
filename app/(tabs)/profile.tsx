@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from "react";
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { colors, spacing } from "@/lib/theme";
 import { useRaftOffStore } from "@/features/map/store";
@@ -18,16 +28,21 @@ import {
   type AudienceProfile,
 } from "@/lib/analytics";
 import {
+  clearMyStatus,
   countConnections,
   countFollowers,
   countFollowing,
+  getActiveStatus,
   listBoatsForUser,
   listMyInterests,
   listInterests,
+  listProfilePhotos,
   profileCompletion,
+  setMyStatus,
 } from "@/features/profiles/api";
-import type { Boat, Interest } from "@/types/raftoff";
+import type { Boat, Interest, ProfilePhoto, UserStatus } from "@/types/raftoff";
 import { ProfileBadges } from "@/components/profile/ProfileBadges";
+import { PhotoGallery } from "@/components/profile/PhotoGallery";
 
 export default function ProfileScreen() {
   const activeMineId = useRaftOffStore((s) => s.activeMineId);
@@ -51,8 +66,12 @@ export default function ProfileScreen() {
   const [exportPreview, setExportPreview] = useState<string | null>(null);
   const [boats, setBoats] = useState<Boat[]>([]);
   const [interestLabels, setInterestLabels] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
   const [counts, setCounts] = useState({ connections: 0, followers: 0, following: 0 });
   const [completion, setCompletion] = useState({ percent: 0, missing: [] as string[] });
+  const [myStatus, setMyStatusRow] = useState<UserStatus | null>(null);
+  const [statusDraft, setStatusDraft] = useState("");
+  const [statusBusy, setStatusBusy] = useState(false);
 
   useEffect(() => {
     track("profile_view");
@@ -69,25 +88,27 @@ export default function ProfileScreen() {
     if (!userId || !authProfile) return;
     void (async () => {
       try {
-        const [myBoats, myInterestIds, catalog, conn, fol, fing] = await Promise.all([
+        const [myBoats, myInterestIds, catalog, conn, fol, fing, myPhotos] = await Promise.all([
           listBoatsForUser(userId),
           listMyInterests(userId),
           listInterests(),
           countConnections(userId),
           countFollowers(userId),
           countFollowing(userId),
+          listProfilePhotos(userId).catch(() => [] as ProfilePhoto[]),
         ]);
         setBoats(myBoats);
         const labels = catalog
           .filter((i: Interest) => myInterestIds.includes(i.id))
           .map((i) => i.label);
         setInterestLabels(labels);
+        setPhotos(myPhotos);
         setCounts({ connections: conn, followers: fol, following: fing });
         setCompletion(
           profileCompletion(authProfile as never, {
             hasBoat: myBoats.length > 0,
             interestCount: myInterestIds.length,
-            photoCount: 0,
+            photoCount: myPhotos.length,
             connectionCount: conn,
           })
         );
@@ -97,9 +118,58 @@ export default function ProfileScreen() {
     })();
   }, [userId, authProfile]);
 
+  useEffect(() => {
+    if (!userId) return;
+    void getActiveStatus(userId)
+      .then(setMyStatusRow)
+      .catch(() => {
+        /* offline / pre-migration */
+      });
+  }, [userId]);
+
   const patchProfile = async (patch: Partial<AudienceProfile>) => {
     await updateAudienceProfile(patch);
     setProfile(await getAudienceProfile());
+  };
+
+  const postStatus = async () => {
+    const body = statusDraft.trim();
+    if (!body) return;
+    setStatusBusy(true);
+    try {
+      const row = await setMyStatus(body, { hours: 24 });
+      setMyStatusRow(row);
+      setStatusDraft("");
+      track("status_set");
+    } catch (e) {
+      Alert.alert("Could not post status", e instanceof Error ? e.message : "Try again");
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const removeStatus = async () => {
+    setStatusBusy(true);
+    try {
+      await clearMyStatus();
+      setMyStatusRow(null);
+    } catch (e) {
+      Alert.alert("Could not clear status", e instanceof Error ? e.message : "Try again");
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const shareProfile = async () => {
+    const handle = authProfile?.username;
+    if (!handle) return;
+    const url = `https://raftoffsocial.com/u/${handle}`;
+    try {
+      await Share.share({ message: `Check out my RaftOff profile: ${url}`, url });
+      track("share_intent", { target: "own_profile" });
+    } catch {
+      /* user dismissed share sheet */
+    }
   };
 
   const initials = (authProfile?.display_name ?? "You")
@@ -142,6 +212,9 @@ export default function ProfileScreen() {
               </Text>
             ))}
           </View>
+          <Pressable style={styles.shareLink} onPress={() => void shareProfile()} hitSlop={8}>
+            <Text style={styles.shareLinkText}>Share profile ↗</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -207,6 +280,13 @@ export default function ProfileScreen() {
         </Pressable>
       )}
 
+      {photos.length ? (
+        <>
+          <Text style={styles.section}>Gallery</Text>
+          <PhotoGallery photos={photos} />
+        </>
+      ) : null}
+
       {active ? (
         <View style={styles.active}>
           <Text style={styles.activeTitle}>You’re anchored</Text>
@@ -227,6 +307,43 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
       ) : null}
+
+      <Text style={styles.section}>Status</Text>
+      {myStatus ? (
+        <View style={styles.statusCard}>
+          <Text style={styles.statusBody}>💬 {myStatus.body}</Text>
+          <Text style={styles.statusMeta}>
+            Visible to connections until {new Date(myStatus.expires_at).toLocaleString()}
+          </Text>
+          <Pressable style={styles.ghost} disabled={statusBusy} onPress={() => void removeStatus()}>
+            <Text style={styles.ghostText}>{statusBusy ? "…" : "Clear status"}</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <>
+          <Text style={styles.hint}>
+            Share what you’re up to for the next 24 hours — visible on your profile and to
+            connections.
+          </Text>
+          <View style={styles.statusRow}>
+            <TextInput
+              style={styles.statusInput}
+              value={statusDraft}
+              onChangeText={setStatusDraft}
+              maxLength={140}
+              placeholder="Grilling at the sandbar…"
+              placeholderTextColor={colors.muted}
+            />
+            <Pressable
+              style={styles.statusPost}
+              disabled={statusBusy || !statusDraft.trim()}
+              onPress={() => void postStatus()}
+            >
+              <Text style={styles.statusPostText}>{statusBusy ? "…" : "Post"}</Text>
+            </Pressable>
+          </View>
+        </>
+      )}
 
       <Text style={styles.section}>Your scene</Text>
       <Text style={styles.hint}>Helps RaftOff match the vibe — and powers sponsor insights.</Text>
@@ -437,6 +554,8 @@ const styles = StyleSheet.create({
   lakeLine: { color: colors.active, fontSize: 13, fontWeight: "600", marginBottom: 6 },
   bio: { color: colors.muted, fontSize: 13, lineHeight: 18, marginBottom: 8 },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  shareLink: { marginTop: 8, alignSelf: "flex-start" },
+  shareLinkText: { color: colors.active, fontSize: 12, fontWeight: "700" },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -522,6 +641,37 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   activeTitle: { color: colors.text, fontWeight: "800" },
+  statusCard: {
+    borderWidth: 1,
+    borderColor: "rgba(46,242,200,0.35)",
+    backgroundColor: "rgba(46,242,200,0.08)",
+    borderRadius: 12,
+    padding: 12,
+    gap: 6,
+    marginBottom: 8,
+  },
+  statusBody: { color: colors.text, fontWeight: "700", fontSize: 14 },
+  statusMeta: { color: colors.muted, fontSize: 11 },
+  statusRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+  statusInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: colors.text,
+    backgroundColor: colors.bgSoft,
+    minHeight: 44,
+  },
+  statusPost: {
+    backgroundColor: colors.action,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    minHeight: 44,
+  },
+  statusPostText: { color: "#fff", fontWeight: "800" },
   section: {
     color: colors.text,
     fontWeight: "800",

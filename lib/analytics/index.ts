@@ -55,6 +55,8 @@ export type AnalyticsEventName =
   | "upload_photo"
   | "profile_view"
   | "share_intent"
+  | "status_set"
+  | "status_clear"
   | "web_cta"
   | "audience_profile_update";
 
