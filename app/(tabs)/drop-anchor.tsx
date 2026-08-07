@@ -12,9 +12,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { colors, spacing, vibes, type VibeId } from "@/lib/theme";
 import { useRaftOffStore } from "@/features/map/store";
-import { dropAnchorSchema } from "@/lib/validation";
+import { dropAnchorSchema, type DurationChoice } from "@/lib/validation";
 import type { Audience, Precision } from "@/types/raftoff";
 import { requestForegroundLocation } from "@/lib/permissions/location";
+import { DURATION_CHOICES, resolveDurationMinutes } from "@/lib/time/duration";
 
 const AUDIENCES: Audience[] = ["public", "followers", "friends", "crew", "private"];
 const PRECISIONS: { id: Precision; label: string }[] = [
@@ -22,12 +23,6 @@ const PRECISIONS: { id: Precision; label: string }[] = [
   { id: "approx", label: "Approximate area" },
   { id: "exact_group", label: "Exact for trusted group" },
   { id: "hidden", label: "Hidden from map" },
-];
-const DURATIONS = [
-  { minutes: 30 as const, label: "30 min" },
-  { minutes: 60 as const, label: "1 hour" },
-  { minutes: 120 as const, label: "2 hours" },
-  { minutes: 240 as const, label: "4 hours" },
 ];
 
 export default function DropAnchorScreen() {
@@ -40,7 +35,9 @@ export default function DropAnchorScreen() {
   const endCheckIn = useRaftOffStore((s) => s.endCheckIn);
   const extendCheckIn = useRaftOffStore((s) => s.extendCheckIn);
   const lakes = useRaftOffStore((s) => s.lakes);
-  const lakeName = lakes.find((l) => l.id === activeLakeId)?.name ?? "Lake";
+  const activeLake = lakes.find((l) => l.id === activeLakeId);
+  const lakeName = activeLake?.name ?? "Lake";
+  const lakeTimezone = activeLake?.timezone ?? "America/Detroit";
 
   const checkInCapable = useMemo(
     () =>
@@ -59,7 +56,7 @@ export default function DropAnchorScreen() {
   const [message, setMessage] = useState("");
   const [audience, setAudience] = useState<Audience>("public");
   const [precision, setPrecision] = useState<Precision>("location");
-  const [durationMinutes, setDurationMinutes] = useState<30 | 60 | 120 | 240>(120);
+  const [durationChoice, setDurationChoice] = useState<DurationChoice>("120");
   const [postToFeed, setPostToFeed] = useState(true);
 
   useEffect(() => {
@@ -74,6 +71,7 @@ export default function DropAnchorScreen() {
   const activeMine = checkIns.find((c) => c.id === activeMineId && c.status === "active");
 
     const onSubmit = async () => {
+    const durationMinutes = resolveDurationMinutes(durationChoice, lakeTimezone);
     const parsed = dropAnchorSchema.safeParse({
       locationId,
       vibe,
@@ -81,6 +79,7 @@ export default function DropAnchorScreen() {
       audience,
       precision,
       durationMinutes,
+      durationChoice,
       postToFeed,
     });
     if (!parsed.success) {
@@ -186,16 +185,19 @@ export default function DropAnchorScreen() {
 
       <Text style={styles.label}>Duration</Text>
       <View style={styles.rowWrap}>
-        {DURATIONS.map((d) => (
+        {DURATION_CHOICES.map((d) => (
           <Pressable
-            key={d.minutes}
-            onPress={() => setDurationMinutes(d.minutes)}
-            style={[styles.chip, durationMinutes === d.minutes && styles.chipOn]}
+            key={d.id}
+            onPress={() => setDurationChoice(d.id)}
+            style={[styles.chip, durationChoice === d.id && styles.chipOn]}
           >
             <Text style={styles.chipText}>{d.label}</Text>
           </Pressable>
         ))}
       </View>
+      <Text style={styles.hint}>
+        You can end your check-in manually anytime — it also expires automatically.
+      </Text>
 
       <Pressable style={styles.check} onPress={() => setPostToFeed((v) => !v)}>
         <Text style={styles.chipText}>

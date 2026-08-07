@@ -209,12 +209,10 @@ export async function createCheckIn(
   return data as CheckIn;
 }
 
+/** Manual checkout — server-enforced ownership + active-only guard (§10). */
 export async function endCheckIn(checkInId: string) {
   assertOnline();
-  const { error } = await client()
-    .from("check_ins")
-    .update({ status: "ended", ended_at: new Date().toISOString() })
-    .eq("id", checkInId);
+  const { error } = await client().rpc("end_check_in", { p_check_in_id: checkInId });
   if (error) throw new ApiError(error.message, error.code);
 }
 

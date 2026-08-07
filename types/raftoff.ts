@@ -207,6 +207,8 @@ export interface Post {
   event_id?: string | null;
   post_type: string;
   text?: string | null;
+  photo_url?: string | null;
+  photo_urls?: string[];
   audience: Audience;
   moderation_status: string;
   created_at: string;
@@ -215,7 +217,35 @@ export interface Post {
   like_count?: number;
   comment_count?: number;
   liked_by_me?: boolean;
+  saved_by_me?: boolean;
 }
+
+export interface PostComment {
+  id: string;
+  post_id: string;
+  author_id: string;
+  text: string;
+  created_at: string;
+  deleted_at?: string | null;
+  profile?: Profile;
+}
+
+export interface UserStatus {
+  id: string;
+  profile_id: string;
+  lake_id?: string | null;
+  location_id?: string | null;
+  body: string;
+  expires_at: string;
+  created_at: string;
+  profile?: Profile;
+}
+
+/** Connection-network feed item — posts, boats, and statuses from people you're connected to. */
+export type ActivityItem =
+  | { kind: "post"; id: string; created_at: string; actor?: Profile; post: Post }
+  | { kind: "boat"; id: string; created_at: string; actor?: Profile; boat: Boat }
+  | { kind: "status"; id: string; created_at: string; actor?: Profile; status: UserStatus };
 
 export interface LakeEvent {
   id: string;
@@ -266,17 +296,4 @@ export interface SeedLocation {
   };
   /** UI-only schematic map position (0–1). Not GPS. */
   schematic?: { x: number; y: number };
-}
-
-/** Voluntary, self-expiring status (~24h) shown on a profile / to connections (§40). */
-export interface UserStatus {
-  id: string;
-  profile_id: string;
-  lake_id?: string | null;
-  location_id?: string | null;
-  body: string;
-  expires_at: string;
-  created_at?: string;
-  updated_at?: string;
-  location?: Pick<Location, "id" | "name" | "slug"> | null;
 }
