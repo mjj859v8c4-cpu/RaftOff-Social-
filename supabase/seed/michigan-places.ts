@@ -632,7 +632,9 @@ export function buildMichiganSeedLocations(): (SeedLocation & {
     type: "restaurant" as LocationType,
     coordinates: null as null,
     boundaryGeoJson: null as null,
-    verificationStatus: (d.partner ? "verified" : "needs_review") as const,
+    verificationStatus: (d.partner ? "verified" : "needs_review") as
+      | "verified"
+      | "needs_review",
     sourceUrl: null,
     attributes: {
       supportsCheckIn: true,

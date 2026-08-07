@@ -236,7 +236,10 @@ export interface SeedLocation {
     regionHint?: string;
     publicAccess?: boolean;
     residentOnly?: boolean;
-    diningCategory?: "bar" | "restaurant" | "waterfront_dining";
+    diningCategory?: "bar" | "restaurant" | "waterfront_dining" | "nightlife";
+    partner?: boolean;
+    partnerTier?: string | null;
+    pitch?: string | null;
   };
   /** UI-only schematic map position (0–1). Not GPS. */
   schematic?: { x: number; y: number };
