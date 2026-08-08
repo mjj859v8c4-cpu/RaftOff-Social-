@@ -7,10 +7,13 @@ import {
   getConnectionStatus,
   getMiniProfile,
   getOrCreateDm,
+  listMutualConnections,
+  mutualConnectionCount,
   requestConnection,
 } from "@/features/profiles/api";
 import type { Boat, ConnectionStatus, Profile, UserStatus } from "@/types/raftoff";
 import { ProfileBadges } from "@/components/profile/ProfileBadges";
+import { MutualCaptains } from "@/components/social/MutualCaptains";
 import { describeDmError } from "@/features/messages/errors";
 
 type Props = {
@@ -28,6 +31,8 @@ export function MiniProfileModal({ visible, profileId, onClose }: Props) {
   const [interests, setInterests] = useState<string[]>([]);
   const [status, setStatus] = useState<UserStatus | null>(null);
   const [connStatus, setConnStatus] = useState<ConnectionStatus>("none");
+  const [mutuals, setMutuals] = useState<Profile[]>([]);
+  const [mutualCount, setMutualCount] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,9 +43,15 @@ export function MiniProfileModal({ visible, profileId, onClose }: Props) {
     setError(null);
     void (async () => {
       try {
-        const [mini, conn] = await Promise.all([
+        const [mini, conn, mutualList, mCount] = await Promise.all([
           getMiniProfile(profileId),
           me ? getConnectionStatus(me, profileId) : Promise.resolve({ status: "none" as const }),
+          me && me !== profileId
+            ? listMutualConnections(profileId, 4).catch(() => [] as Profile[])
+            : Promise.resolve([] as Profile[]),
+          me && me !== profileId
+            ? mutualConnectionCount(profileId).catch(() => 0)
+            : Promise.resolve(0),
         ]);
         if (cancelled) return;
         setProfile(mini.profile);
@@ -48,6 +59,8 @@ export function MiniProfileModal({ visible, profileId, onClose }: Props) {
         setInterests(mini.interestLabels);
         setStatus(mini.status);
         setConnStatus(conn.status);
+        setMutuals(mutualList);
+        setMutualCount(mCount);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Could not load profile");
       } finally {
@@ -65,6 +78,8 @@ export function MiniProfileModal({ visible, profileId, onClose }: Props) {
     setInterests([]);
     setStatus(null);
     setConnStatus("none");
+    setMutuals([]);
+    setMutualCount(0);
     onClose();
   };
 
@@ -125,58 +140,96 @@ export function MiniProfileModal({ visible, profileId, onClose }: Props) {
 
               {error ? <Text style={styles.error}>{error}</Text> : null}
 
+              {!isSelf && me && mutualCount > 0 ? (
+                <MutualCaptains mutuals={mutuals} totalCount={mutualCount} compact />
+              ) : null}
+
               <View style={styles.actions}>
-                <Pressable
-                  style={styles.secondary}
-                  onPress={() => {
-                    close();
-                    router.push(`/u/${profile.username}` as never);
-                  }}
-                >
-                  <Text style={styles.secondaryText}>View Profile</Text>
-                </Pressable>
                 {!isSelf && me ? (
                   connStatus === "connected" ? (
-                    <Pressable
-                      style={styles.primary}
-                      disabled={busy}
-                      onPress={() => {
-                        setBusy(true);
-                        setError(null);
-                        void getOrCreateDm(profile.id)
-                          .then((id) => {
-                            close();
-                            router.push(`/messages/${id}` as never);
-                          })
-                          .catch((e) => setError(describeDmError(e)))
-                          .finally(() => setBusy(false));
-                      }}
-                    >
-                      <Text style={styles.primaryText}>{busy ? "…" : "Message"}</Text>
-                    </Pressable>
+                    <>
+                      <Pressable
+                        style={styles.primary}
+                        disabled={busy}
+                        onPress={() => {
+                          setBusy(true);
+                          setError(null);
+                          void getOrCreateDm(profile.id)
+                            .then((id) => {
+                              close();
+                              router.push(`/messages/${id}` as never);
+                            })
+                            .catch((e) => setError(describeDmError(e)))
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        <Text style={styles.primaryText}>{busy ? "…" : "Message"}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.secondary}
+                        onPress={() => {
+                          close();
+                          router.push(`/u/${profile.username}` as never);
+                        }}
+                      >
+                        <Text style={styles.secondaryText}>View Profile</Text>
+                      </Pressable>
+                    </>
                   ) : connStatus === "pending_out" ? (
-                    <View style={[styles.primary, styles.primaryMuted]}>
-                      <Text style={styles.primaryText}>Requested</Text>
-                    </View>
+                    <>
+                      <View style={[styles.primary, styles.primaryMuted]}>
+                        <Text style={styles.primaryText}>Requested</Text>
+                      </View>
+                      <Pressable
+                        style={styles.secondary}
+                        onPress={() => {
+                          close();
+                          router.push(`/u/${profile.username}` as never);
+                        }}
+                      >
+                        <Text style={styles.secondaryText}>View Profile</Text>
+                      </Pressable>
+                    </>
                   ) : (
-                    <Pressable
-                      style={styles.primary}
-                      disabled={busy || profile.allow_connection_requests === false}
-                      onPress={() => {
-                        if (!me) return;
-                        setBusy(true);
-                        void requestConnection(me, profile.id)
-                          .then(() => setConnStatus("pending_out"))
-                          .catch((e) =>
-                            setError(e instanceof Error ? e.message : "Could not send request")
-                          )
-                          .finally(() => setBusy(false));
-                      }}
-                    >
-                      <Text style={styles.primaryText}>{busy ? "…" : "Connect"}</Text>
-                    </Pressable>
+                    <>
+                      <Pressable
+                        style={styles.primary}
+                        disabled={busy || profile.allow_connection_requests === false}
+                        onPress={() => {
+                          if (!me) return;
+                          setBusy(true);
+                          void requestConnection(me, profile.id)
+                            .then(() => setConnStatus("pending_out"))
+                            .catch((e) =>
+                              setError(e instanceof Error ? e.message : "Could not send request")
+                            )
+                            .finally(() => setBusy(false));
+                        }}
+                      >
+                        <Text style={styles.primaryText}>{busy ? "…" : "Connect"}</Text>
+                      </Pressable>
+                      <Pressable
+                        style={styles.secondary}
+                        onPress={() => {
+                          close();
+                          router.push(`/u/${profile.username}` as never);
+                        }}
+                      >
+                        <Text style={styles.secondaryText}>View Profile</Text>
+                      </Pressable>
+                    </>
                   )
-                ) : null}
+                ) : (
+                  <Pressable
+                    style={styles.secondary}
+                    onPress={() => {
+                      close();
+                      router.push(`/u/${profile.username}` as never);
+                    }}
+                  >
+                    <Text style={styles.secondaryText}>View Profile</Text>
+                  </Pressable>
+                )}
               </View>
             </>
           )}

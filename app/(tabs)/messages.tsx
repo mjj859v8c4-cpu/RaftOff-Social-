@@ -88,48 +88,73 @@ export default function MessagesTabScreen() {
           }
           ListEmptyComponent={
             <View style={styles.empty}>
+              <Text style={styles.emptyEmoji}>💬</Text>
               <Text style={styles.emptyTitle}>No conversations yet</Text>
               <Text style={styles.emptyBody}>
-                Connect with boaters on the map or in Discover, then tap Message to start a
-                thread.
+                Connect with captains on the map or in Discover — then tap Message to
+                start a thread.
               </Text>
               <Pressable
                 style={styles.emptyBtn}
                 onPress={() => router.push("/(tabs)/discover" as never)}
               >
-                <Text style={styles.emptyBtnText}>Find people</Text>
+                <Text style={styles.emptyBtnText}>Find people to connect</Text>
+              </Pressable>
+              <Pressable
+                style={styles.emptySecondary}
+                onPress={() => router.push("/connections" as never)}
+              >
+                <Text style={styles.emptySecondaryText}>View connections</Text>
               </Pressable>
             </View>
           }
           renderItem={({ item }) => {
             const unread = unreadByConversation[item.id] ?? 0;
+            const isGroup = item.kind === "group";
+            const displayName = isGroup
+              ? item.title ?? "Crew chat"
+              : item.peer?.display_name ?? "Captain";
+            const subtitle = isGroup
+              ? `${item.memberCount ?? 0} captains`
+              : item.peer?.username
+                ? `@${item.peer.username}`
+                : "";
             return (
               <Pressable
-                style={styles.row}
+                style={[styles.row, unread > 0 && styles.rowUnread]}
                 onPress={() => router.push(`/messages/${item.id}` as never)}
               >
-                {item.peer.avatar_url ? (
+                {isGroup ? (
+                  <View style={[styles.avatar, styles.groupAvatar]}>
+                    <Text style={styles.groupAvatarText}>⚓</Text>
+                  </View>
+                ) : item.peer?.avatar_url ? (
                   <Image source={{ uri: item.peer.avatar_url }} style={styles.avatar} />
                 ) : (
                   <View style={[styles.avatar, styles.avatarFallback]}>
                     <Text style={styles.avatarText}>
-                      {(item.peer.display_name ?? "?").slice(0, 2).toUpperCase()}
+                      {(item.peer?.display_name ?? "?").slice(0, 2).toUpperCase()}
                     </Text>
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
                   <View style={styles.rowTop}>
                     <Text style={[styles.name, unread > 0 && styles.nameUnread]} numberOfLines={1}>
-                      {item.peer.display_name}
+                      {displayName}
                     </Text>
                     <Text style={styles.time}>{formatWhen(item.lastMessage?.created_at)}</Text>
                   </View>
+                  {subtitle ? (
+                    <Text style={styles.handle} numberOfLines={1}>
+                      {subtitle}
+                    </Text>
+                  ) : null}
                   <View style={styles.rowTop}>
                     <Text
                       style={[styles.preview, unread > 0 && styles.previewUnread]}
                       numberOfLines={1}
                     >
-                      {item.lastMessage?.body ?? "Say hello on the water"}
+                      {item.lastMessage?.body ?? (isGroup ? "Start the crew chat" : "Say hello on the water")}
                     </Text>
                     {unread > 0 ? (
                       <View style={styles.badge}>
@@ -179,9 +204,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingVertical: 12,
+    paddingHorizontal: 4,
     borderBottomWidth: 1,
     borderBottomColor: colors.line,
   },
+  rowUnread: { backgroundColor: "rgba(46,242,200,0.04)" },
   rowTop: { flexDirection: "row", alignItems: "center", gap: 8 },
   avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: colors.bgElevated },
   avatarFallback: {
@@ -190,6 +217,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarText: { color: "#fff", fontWeight: "800" },
+  groupAvatar: {
+    backgroundColor: "rgba(255,61,130,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(255,61,130,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  groupAvatarText: { fontSize: 20 },
+  handle: { color: colors.muted, fontSize: 11, marginTop: 1 },
   name: { color: colors.text, fontWeight: "700", flex: 1 },
   nameUnread: { fontWeight: "800" },
   time: { color: colors.muted, fontSize: 11 },
@@ -206,6 +242,7 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
   empty: { alignItems: "center", marginTop: 60, paddingHorizontal: spacing.lg, gap: 8 },
+  emptyEmoji: { fontSize: 36, marginBottom: 4 },
   emptyTitle: { color: colors.text, fontWeight: "800", fontSize: 16 },
   emptyBody: { color: colors.muted, textAlign: "center", lineHeight: 20 },
   emptyBtn: {
@@ -216,5 +253,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   emptyBtnText: { color: "#fff", fontWeight: "800" },
+  emptySecondary: { marginTop: 4, paddingVertical: 8 },
+  emptySecondaryText: { color: colors.active, fontWeight: "700" },
   error: { color: "#ff8fa8", paddingHorizontal: spacing.lg, marginTop: 8 },
 });

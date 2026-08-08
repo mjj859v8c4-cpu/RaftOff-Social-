@@ -75,30 +75,35 @@ export function LocationSheet({
       )}
 
       {peopleHere.length ? (
-        <View style={styles.peopleRow}>
-          {peopleHere.slice(0, MAX_AVATARS).map((c) => (
-            <Pressable
-              key={c.user_id}
-              onPress={() => setOpenProfileId(c.user_id)}
-              style={styles.avatarWrap}
-              hitSlop={4}
-            >
-              {c.profile?.avatar_url ? (
-                <Image source={{ uri: c.profile.avatar_url }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatar, styles.avatarFallback]}>
-                  <Text style={styles.avatarText}>
-                    {(c.profile?.display_name ?? "?").slice(0, 2).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-            </Pressable>
-          ))}
-          {overflow > 0 ? (
-            <View style={[styles.avatar, styles.avatarMore]}>
-              <Text style={styles.avatarMoreText}>+{overflow}</Text>
-            </View>
-          ) : null}
+        <View style={styles.peopleSection}>
+          <Text style={styles.peopleLabel}>
+            See who's here · {peopleHere.length} captain{peopleHere.length === 1 ? "" : "s"}
+          </Text>
+          <View style={styles.peopleRow}>
+            {peopleHere.slice(0, MAX_AVATARS).map((c) => (
+              <Pressable
+                key={c.user_id}
+                onPress={() => setOpenProfileId(c.user_id)}
+                style={styles.avatarWrap}
+                hitSlop={4}
+              >
+                {c.profile?.avatar_url ? (
+                  <Image source={{ uri: c.profile.avatar_url }} style={styles.avatar} />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarFallback]}>
+                    <Text style={styles.avatarText}>
+                      {(c.profile?.display_name ?? "?").slice(0, 2).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
+              </Pressable>
+            ))}
+            {overflow > 0 ? (
+              <View style={[styles.avatar, styles.avatarMore]}>
+                <Text style={styles.avatarMoreText}>+{overflow}</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       ) : null}
 
@@ -114,9 +119,9 @@ export function LocationSheet({
             <Text style={styles.secondaryText}>End check-in</Text>
           </Pressable>
         ) : (
-          <Pressable style={styles.secondary} onPress={onDropAnchor}>
-            <Text style={styles.secondaryText}>
-              {isDining ? "I’m here" : "Drop Anchor Here"}
+          <Pressable style={[styles.secondary, isDining && styles.hereBtn]} onPress={onDropAnchor}>
+            <Text style={[styles.secondaryText, isDining && styles.hereBtnText]}>
+              {isDining ? "I'm here" : "Drop Anchor Here"}
             </Text>
           </Pressable>
         )}
@@ -151,7 +156,9 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 20, fontWeight: "700", marginBottom: 6 },
   meta: { color: colors.muted, fontSize: 13, marginBottom: 8 },
   warn: { color: colors.warn, fontSize: 12, marginBottom: 10 },
-  peopleRow: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
+  peopleSection: { marginBottom: 10, gap: 6 },
+  peopleLabel: { color: colors.active, fontSize: 12, fontWeight: "800" },
+  peopleRow: { flexDirection: "row", alignItems: "center" },
   avatarWrap: { marginRight: -8 },
   avatar: {
     width: 34,
@@ -191,4 +198,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,0.06)",
   },
   secondaryText: { color: colors.text, fontWeight: "700" },
+  hereBtn: {
+    backgroundColor: colors.action,
+    borderColor: colors.action,
+  },
+  hereBtnText: { color: "#041018", fontWeight: "800" },
 });

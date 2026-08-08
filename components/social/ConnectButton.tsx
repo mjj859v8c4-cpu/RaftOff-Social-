@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, Text } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
 import { colors } from "@/lib/theme";
 import {
   acceptConnection,
   cancelConnectionRequest,
+  getOrCreateDm,
   requestConnection,
 } from "@/features/profiles/api";
 import type { ConnectionStatus } from "@/types/raftoff";
@@ -20,6 +22,7 @@ export function ConnectButton({
   requestId,
   onChange,
   compact = false,
+  showMessage = false,
 }: {
   meId: string;
   targetId: string;
@@ -27,8 +30,11 @@ export function ConnectButton({
   requestId?: string;
   onChange: (next: { status: ConnectionStatus; requestId?: string }) => void;
   compact?: boolean;
+  /** When connected, show a Message button beside Connected. */
+  showMessage?: boolean;
 }) {
   const [busy, setBusy] = useState(false);
+  const [msgBusy, setMsgBusy] = useState(false);
   const [error, setError] = useState(false);
 
   if (status === "self") return null;
@@ -47,6 +53,32 @@ export function ConnectButton({
   };
 
   if (status === "connected") {
+    if (showMessage) {
+      return (
+        <View style={styles.row}>
+          <Pressable
+            style={[styles.btn, styles.messageBtn, compact && styles.compact]}
+            disabled={msgBusy}
+            onPress={() => {
+              setMsgBusy(true);
+              void getOrCreateDm(targetId)
+                .then((id) => router.push(`/messages/${id}` as never))
+                .catch(() => setError(true))
+                .finally(() => setMsgBusy(false));
+            }}
+          >
+            {msgBusy ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.text}>Message</Text>
+            )}
+          </Pressable>
+          <Pressable style={[styles.btn, styles.connected, compact && styles.compact]} disabled>
+            <Text style={[styles.text, styles.connectedText]}>{error ? "!" : "Connected"}</Text>
+          </Pressable>
+        </View>
+      );
+    }
     return (
       <Pressable style={[styles.btn, styles.connected, compact && styles.compact]} disabled>
         <Text style={[styles.text, styles.connectedText]}>{error ? "!" : "Connected"}</Text>
@@ -98,6 +130,7 @@ export function ConnectButton({
 }
 
 const styles = StyleSheet.create({
+  row: { flexDirection: "row", gap: 6, alignItems: "center" },
   btn: {
     backgroundColor: colors.action,
     borderRadius: 999,
@@ -108,6 +141,7 @@ const styles = StyleSheet.create({
     minWidth: 92,
   },
   compact: { paddingHorizontal: 12, paddingVertical: 7, minWidth: 76 },
+  messageBtn: { backgroundColor: colors.action },
   pending: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.line },
   connected: { backgroundColor: "transparent", borderWidth: 1, borderColor: "rgba(46,242,200,0.4)" },
   text: { color: "#fff", fontWeight: "800", fontSize: 12.5 },

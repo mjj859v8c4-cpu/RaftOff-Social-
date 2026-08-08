@@ -776,6 +776,19 @@ export async function mutualConnectionCount(otherId: string): Promise<number> {
   return (data as number) ?? 0;
 }
 
+/** Mutual captain avatars for profile / mini-profile (near Connect). */
+export async function listMutualConnections(
+  otherId: string,
+  limit = 6
+): Promise<Profile[]> {
+  const { data, error } = await client().rpc("mutual_connections", {
+    other: otherId,
+    p_limit: limit,
+  });
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? []) as Profile[];
+}
+
 export async function searchProfiles(query: string, limit = 20): Promise<Profile[]> {
   const q = query.trim().replace(/%/g, "");
   if (!q) return [];
@@ -936,7 +949,9 @@ export async function getOrCreateDm(otherUserId: string): Promise<string> {
 export async function listConversations(userId: string): Promise<ConversationPreview[]> {
   const { data: memberships, error } = await client()
     .from("conversation_members")
-    .select("conversation_id, conversations(id, updated_at)")
+    .select(
+      "conversation_id, conversations(id, updated_at, kind, title, crew_id)"
+    )
     .eq("profile_id", userId);
   if (error) throw new ApiError(error.message, error.code);
   const rows = memberships ?? [];
@@ -944,16 +959,28 @@ export async function listConversations(userId: string): Promise<ConversationPre
 
   const previews: ConversationPreview[] = [];
   for (const row of rows) {
-    const conv = row.conversations as unknown as { id: string; updated_at: string } | null;
+    const conv = row.conversations as unknown as {
+      id: string;
+      updated_at: string;
+      kind?: string;
+      title?: string | null;
+      crew_id?: string | null;
+    } | null;
     if (!conv?.id) continue;
+    const kind = (conv.kind ?? "dm") as ConversationPreview["kind"];
+
     const { data: members, error: memErr } = await client()
       .from("conversation_members")
       .select(`profile_id, profiles:profile_id(${PROFILE_CARD})`)
       .eq("conversation_id", conv.id);
     if (memErr) throw new ApiError(memErr.message, memErr.code);
+
+    const memberCount = members?.length ?? 0;
     const peerRow = (members ?? []).find((m) => m.profile_id !== userId);
     const peer = (peerRow?.profiles as unknown as Profile) ?? null;
-    if (!peer) continue;
+
+    if (kind === "dm" && !peer) continue;
+
     const { data: lastMsgs, error: msgErr } = await client()
       .from("messages")
       .select("id, conversation_id, sender_id, body, created_at, read_at")
@@ -964,7 +991,11 @@ export async function listConversations(userId: string): Promise<ConversationPre
     previews.push({
       id: conv.id,
       updated_at: conv.updated_at,
-      peer,
+      kind,
+      title: conv.title,
+      peer: kind === "dm" ? peer : null,
+      memberCount,
+      crewId: conv.crew_id ?? null,
       lastMessage: (lastMsgs?.[0] as DirectMessage) ?? null,
     });
   }

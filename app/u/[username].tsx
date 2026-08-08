@@ -24,9 +24,11 @@ import {
   getPublicActiveCheckIn,
   isFollowing as checkIsFollowing,
   listBoatsForUser,
+  listMutualConnections,
   listMyInterests,
   listInterests,
   listProfilePhotos,
+  mutualConnectionCount,
   requestConnection,
   unfollowProfile,
 } from "@/features/profiles/api";
@@ -42,6 +44,7 @@ import { listPostsByAuthor } from "@/features/posts/api";
 import { describeDmError } from "@/features/messages/errors";
 import { track } from "@/lib/analytics";
 import { SafetyBanner } from "@/components/safety/SafetyBanner";
+import { MutualCaptains } from "@/components/social/MutualCaptains";
 
 function memberSince(iso?: string | null): string | null {
   if (!iso) return null;
@@ -75,6 +78,8 @@ export default function PublicProfileScreen() {
   const [modOpen, setModOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mutuals, setMutuals] = useState<Profile[]>([]);
+  const [mutualCount, setMutualCount] = useState(0);
 
   useEffect(() => {
     if (!username) return;
@@ -100,6 +105,8 @@ export default function PublicProfileScreen() {
           personStatus,
           activeCheckIn,
           recentPosts,
+          mutualList,
+          mCount,
         ] = await Promise.all([
           listBoatsForUser(p.id),
           listMyInterests(p.id),
@@ -113,6 +120,12 @@ export default function PublicProfileScreen() {
           getActiveStatus(p.id).catch(() => null),
           getPublicActiveCheckIn(p.id).catch(() => null),
           listPostsByAuthor(p.id).catch(() => [] as Post[]),
+          me && me !== p.id
+            ? listMutualConnections(p.id, 4).catch(() => [] as Profile[])
+            : Promise.resolve([] as Profile[]),
+          me && me !== p.id
+            ? mutualConnectionCount(p.id).catch(() => 0)
+            : Promise.resolve(0),
         ]);
         setBoat(boats.find((b) => b.is_primary) ?? boats[0] ?? null);
         setInterests(
@@ -126,6 +139,8 @@ export default function PublicProfileScreen() {
         setFollowing(iFollow);
         setActiveStatus(personStatus);
         setOnWater(activeCheckIn);
+        setMutuals(mutualList);
+        setMutualCount(mCount);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -215,6 +230,10 @@ export default function PublicProfileScreen() {
       </View>
 
       {!isSelf && me ? (
+        <>
+          {mutualCount > 0 ? (
+            <MutualCaptains mutuals={mutuals} totalCount={mutualCount} />
+          ) : null}
         <View style={styles.actions}>
           <Pressable
             style={[styles.followBtn, following && styles.followBtnOn]}
@@ -290,6 +309,7 @@ export default function PublicProfileScreen() {
             <Text style={styles.moreText}>•••</Text>
           </Pressable>
         </View>
+        </>
       ) : null}
       {isSelf ? (
         <View style={styles.actions}>

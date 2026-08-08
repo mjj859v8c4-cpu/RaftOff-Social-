@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LakeMapView } from "@/components/map/LakeMapView";
 import { LocationSheet } from "@/components/map/LocationSheet";
@@ -15,6 +15,7 @@ import { LoadingState } from "@/components/ui/States";
 
 export default function MapScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ locationId?: string }>();
   const activeLakeId = useRaftOffStore((s) => s.activeLakeId);
   const setActiveLakeId = useRaftOffStore((s) => s.setActiveLakeId);
   const locations = useRaftOffStore((s) => s.locationsForActiveLake());
@@ -29,6 +30,10 @@ export default function MapScreen() {
   const cacheUpdatedAt = useRaftOffStore((s) => s.cacheUpdatedAt);
   const { data: hotspots } = useListHotspots();
   const [vibeFilter, setVibeFilter] = useState("all");
+
+  useEffect(() => {
+    if (params.locationId) selectLocation(params.locationId);
+  }, [params.locationId, selectLocation]);
 
   const hotSpots = useMemo(
     () =>

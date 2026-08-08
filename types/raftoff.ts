@@ -174,10 +174,16 @@ export interface DirectMessage {
   sender?: Profile;
 }
 
+export type ConversationKind = "dm" | "group";
+
 export interface ConversationPreview {
   id: string;
   updated_at: string;
-  peer: Profile;
+  kind: ConversationKind;
+  title?: string | null;
+  peer?: Profile | null;
+  memberCount?: number;
+  crewId?: string | null;
   lastMessage?: DirectMessage | null;
 }
 
@@ -274,11 +280,13 @@ export interface Crew {
   name: string;
   description?: string | null;
   cover_url?: string | null;
-  visibility: string;
+  visibility: "public" | "private" | string;
+  conversation_id?: string | null;
   created_by?: string | null;
   created_at?: string;
   member_count?: number;
   joined?: boolean;
+  my_role?: string | null;
 }
 
 export interface LakeSummary {

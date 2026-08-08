@@ -22,6 +22,7 @@
     { id: "jobbie-nooner-area", name: "Jobbie Nooner Area", lat: 42.538, lng: -82.6766, type: "sandbar" },
     { id: "grassy-island", name: "Grassy Island", lat: 42.6044, lng: -82.6583, type: "sandbar" },
     { id: "anchor-bay", name: "Anchor Bay", lat: 42.65, lng: -82.7166, type: "anchorage" },
+    { id: "on-the-bay", name: "On the Bay", lat: 42.648, lng: -82.708, type: "anchorage" },
     { id: "big-muscamoot-bay", name: "Big Muscamoot Bay", lat: 42.5578, lng: -82.6607, type: "anchorage" },
     { id: "little-muscamoot-bay", name: "Little Muscamoot Bay", lat: 42.5781, lng: -82.626, type: "anchorage" },
     { id: "goose-bay", name: "Goose Bay", lat: 42.5845, lng: -82.6791, type: "anchorage" },
@@ -64,6 +65,11 @@
     { id: "tin-fish-new-baltimore", name: "Tin Fish", lat: 42.6815, lng: -82.7368, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "New Baltimore · Anchor Bay", pitch: "Anchor Bay waterfront — featured for north-bay boaters." },
     { id: "pinkeys-boulevard-inn", name: "Pinkey’s Boulevard Inn", lat: 42.821, lng: -82.4925, type: "restaurant", category: "Restaurant", partnerTier: "listed", note: "St. Clair", pitch: "Historic inn dining — listed partner presence." },
     { id: "surfside-bar-grill", name: "Surfside Bar & Grill", lat: 42.6155, lng: -82.7875, type: "bar", category: "Bar", partnerTier: "listed", note: "Near Belle Maer", pitch: "Bay-side bar listing for post-raft crews." },
+    { id: "shortys-bar-grill", name: "Shorty's Bar & Grill", lat: 42.6842, lng: -82.7385, type: "bar", category: "Bar", partnerTier: "listed", note: "New Baltimore · Anchor Bay", pitch: "Après-boat stop on Anchor Bay." },
+    { id: "fin-eatery", name: "Fin's Eatery", lat: 42.6828, lng: -82.7358, type: "restaurant", category: "Restaurant", partnerTier: "listed", note: "New Baltimore riverfront", pitch: "Riverfront dinner after a bay day." },
+    { id: "waterfront-grosse-pointe", name: "The Waterfront Restaurant", lat: 42.3855, lng: -82.9125, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "Grosse Pointe Park", pitch: "South-shore lakefront — featured partner." },
+    { id: "mikes-on-the-water", name: "Mike's on the Water", lat: 42.4795, lng: -82.8838, type: "bar", category: "Bar", partnerTier: "listed", note: "Nautical Mile corridor", pitch: "Mile traffic bar — I'm here check-ins." },
+    { id: "captains-club-algonac", name: "Captain's Club", lat: 42.6185, lng: -82.5625, type: "waterfront_dining", category: "Dock & dine", partnerTier: "featured", note: "Algonac riverfront", pitch: "Riverfront club — featured north-channel partner." },
   ];
 
   var ALL_PLACES = PLACES.concat(DINING);
@@ -398,9 +404,9 @@
     var overflow = authors.length - shown.length;
     el.hidden = false;
     el.innerHTML =
-      '<span class="sheet-people-label">Here now · ' +
+      '<span class="sheet-people-label">See who\'s here · ' +
       authors.length +
-      (authors.length === 1 ? " boater" : " boaters") +
+      (authors.length === 1 ? " captain" : " captains") +
       "</span>" +
       '<div class="sheet-people-row" role="list">' +
       shown
@@ -458,6 +464,12 @@
         return "<span>" + escapeHtml(tag) + "</span>";
       })
       .join("");
+    var actionsEl = $("mini-profile-actions");
+    if (actionsEl) {
+      actionsEl.innerHTML =
+        '<button type="button" class="btn btn-primary btn-sm" id="mini-profile-connect">Connect</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" id="mini-profile-message">Message</button>';
+    }
     panel.hidden = false;
     document.querySelectorAll(".avatar-btn.is-active-ring").forEach(function (btn) {
       btn.classList.remove("is-active-ring");
@@ -975,6 +987,21 @@
     closeMiniProfile();
     sheet.hidden = false;
     sheet.dataset.placeId = place.id;
+    var imHereBtn = $("sheet-im-here");
+    var anchorBtn = $("sheet-anchor");
+    if (isDiningPlace(place)) {
+      if (anchorBtn) anchorBtn.hidden = true;
+      if (imHereBtn) {
+        imHereBtn.hidden = false;
+        imHereBtn.textContent = "I'm here";
+      }
+    } else {
+      if (anchorBtn) {
+        anchorBtn.hidden = false;
+        anchorBtn.textContent = "Drop Anchor here";
+      }
+      if (imHereBtn) imHereBtn.hidden = true;
+    }
   }
 
   function initLiveMap() {
@@ -1093,6 +1120,26 @@
     showTab("anchor");
   });
 
+  $("sheet-im-here") &&
+    $("sheet-im-here").addEventListener("click", function () {
+      var placeId = $("map-sheet").dataset.placeId;
+      if (placeId) $("anchor-place").value = placeId;
+      $("map-sheet").hidden = true;
+      showTab("anchor");
+      toast("Drop Anchor when you're docked — then See who's here");
+    });
+
+  document.addEventListener("click", function (event) {
+    if (event.target && event.target.id === "mini-profile-connect") {
+      toast("Connection request sent");
+      return;
+    }
+    if (event.target && event.target.id === "mini-profile-message") {
+      showTab("messages");
+      toast("Start a DM in Messages");
+    }
+  });
+
   $("sheet-feed").addEventListener("click", function () {
     $("map-sheet").hidden = true;
     showTab("feed");
@@ -1168,7 +1215,17 @@
     if (!list) return;
     if (!seedMessages.length) {
       list.innerHTML =
-        '<li class="feed-item" style="display:block;color:var(--muted)">No conversations yet.</li>';
+        '<li class="feed-item messages-empty" style="display:block">' +
+        '<p class="empty-title">No conversations yet</p>' +
+        '<p class="empty-body">Connect with captains on the map or in Discover — then start a thread.</p>' +
+        '<button type="button" class="btn btn-primary btn-sm" id="msg-empty-discover">Find people to connect</button>' +
+        "</li>";
+      var discoverBtn = $("msg-empty-discover");
+      if (discoverBtn) {
+        discoverBtn.addEventListener("click", function () {
+          showTab("discover");
+        });
+      }
       return;
     }
     list.innerHTML = seedMessages
@@ -1333,8 +1390,12 @@
     renderCheckinPins();
     renderProfile();
     $("anchor-message").value = "";
-    toast("Anchor dropped · visible per your privacy settings");
+    toast("Anchor dropped · tap See who's here on the map");
     showTab("map");
+    var placeId = checkin.placeId;
+    requestAnimationFrame(function () {
+      openSheetForPlace(placeId);
+    });
   });
 
   /* events */

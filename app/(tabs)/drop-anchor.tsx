@@ -89,7 +89,15 @@ export default function DropAnchorScreen() {
     }
     try {
       await dropAnchor(parsed.data);
-      Alert.alert("You’re anchored", "Presence will expire automatically.", [
+      Alert.alert("You're anchored", "Presence will expire automatically.", [
+        {
+          text: "See who's here",
+          onPress: () =>
+            router.push({
+              pathname: "/(tabs)/map",
+              params: { locationId: parsed.data.locationId },
+            } as never),
+        },
         { text: "View map", onPress: () => router.push("/(tabs)/map") },
       ]);
     } catch (e) {

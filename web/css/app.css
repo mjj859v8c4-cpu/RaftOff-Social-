@@ -768,6 +768,31 @@ a {
   margin-bottom: 0.75rem;
 }
 
+.mini-profile-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin: 0.65rem 0 0.35rem;
+}
+
+.messages-empty {
+  text-align: center;
+  padding: 2rem 1rem !important;
+}
+
+.messages-empty .empty-title {
+  color: var(--text);
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+}
+
+.messages-empty .empty-body {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+  margin-bottom: 0.85rem;
+}
+
 .mini-profile-link {
   border: none;
   background: transparent;

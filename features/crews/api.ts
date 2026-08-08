@@ -1,11 +1,10 @@
 /**
- * Crews — minimal browse/join stub on top of the existing crews / crew_members
- * tables (see 20260807200000_social_profiles.sql).
+ * Crews — public browse/join + private crews with linked group chat.
  */
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ApiError } from "@/lib/api/production";
 import { track } from "@/lib/analytics";
-import type { Crew } from "@/types/raftoff";
+import type { Crew, Profile } from "@/types/raftoff";
 
 function client() {
   const sb = getSupabase();
@@ -25,19 +24,37 @@ function slugify(name: string): string {
   return `${base || "crew"}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
-export async function listCrews(lakeId?: string): Promise<Crew[]> {
+export async function listCrews(lakeId?: string, profileId?: string): Promise<Crew[]> {
   let query = client()
     .from("crews")
     .select("*, crew_members(count)")
-    .eq("visibility", "public")
     .order("created_at", { ascending: false });
   if (lakeId) query = query.eq("lake_id", lakeId);
+
   const { data, error } = await query;
   if (error) throw new ApiError(error.message, error.code);
-  return (data ?? []).map((row: any) => ({
-    ...row,
-    member_count: row.crew_members?.[0]?.count ?? 0,
-  })) as Crew[];
+
+  let myIds = new Set<string>();
+  let roles: Record<string, string> = {};
+  if (profileId) {
+    const { data: mine } = await client()
+      .from("crew_members")
+      .select("crew_id, role")
+      .eq("profile_id", profileId);
+    for (const row of mine ?? []) {
+      myIds.add(row.crew_id as string);
+      roles[row.crew_id as string] = row.role as string;
+    }
+  }
+
+  return (data ?? [])
+    .filter((row: any) => row.visibility === "public" || myIds.has(row.id))
+    .map((row: any) => ({
+      ...row,
+      member_count: row.crew_members?.[0]?.count ?? 0,
+      joined: myIds.has(row.id),
+      my_role: roles[row.id] ?? null,
+    })) as Crew[];
 }
 
 export async function listMyCrewIds(profileId: string): Promise<string[]> {
@@ -47,6 +64,19 @@ export async function listMyCrewIds(profileId: string): Promise<string[]> {
     .eq("profile_id", profileId);
   if (error) throw new ApiError(error.message, error.code);
   return (data ?? []).map((r) => r.crew_id as string);
+}
+
+export async function listCrewMembers(crewId: string): Promise<Profile[]> {
+  const { data, error } = await client()
+    .from("crew_members")
+    .select(
+      "profile_id, profiles:profile_id(id, username, display_name, avatar_url, is_verified, badges)"
+    )
+    .eq("crew_id", crewId);
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? [])
+    .map((r) => r.profiles as unknown as Profile)
+    .filter(Boolean);
 }
 
 export async function joinCrew(crewId: string, profileId: string) {
@@ -72,9 +102,29 @@ export async function createCrew(input: {
   description?: string;
   lakeId?: string | null;
   createdBy: string;
+  visibility?: "public" | "private";
 }): Promise<Crew> {
   const name = input.name.trim();
   if (!name) throw new ApiError("Crew name is required", "validation");
+
+  if (input.visibility === "private") {
+    const { data, error } = await client().rpc("create_private_crew", {
+      p_name: name,
+      p_description: input.description?.trim() || null,
+      p_lake_id: input.lakeId ?? null,
+    });
+    if (error) throw new ApiError(error.message, error.code);
+    const crewId = data as string;
+    const { data: crew, error: fetchErr } = await client()
+      .from("crews")
+      .select("*")
+      .eq("id", crewId)
+      .single();
+    if (fetchErr) throw new ApiError(fetchErr.message, fetchErr.code);
+    track("create_crew", { crewId, visibility: "private" });
+    return { ...(crew as Crew), member_count: 1, joined: true, my_role: "owner" };
+  }
+
   const sb = client();
   const { data, error } = await sb
     .from("crews")
@@ -93,6 +143,24 @@ export async function createCrew(input: {
     .from("crew_members")
     .insert({ crew_id: data.id, profile_id: input.createdBy, role: "owner" });
   if (joinErr) throw new ApiError(joinErr.message, joinErr.code);
-  track("create_crew", { crewId: data.id });
-  return { ...(data as Crew), member_count: 1, joined: true };
+  track("create_crew", { crewId: data.id, visibility: "public" });
+  return { ...(data as Crew), member_count: 1, joined: true, my_role: "owner" };
+}
+
+export async function inviteToCrew(crewId: string, profileId: string) {
+  const { error } = await client().rpc("invite_to_crew", {
+    p_crew_id: crewId,
+    p_profile_id: profileId,
+  });
+  if (error) throw new ApiError(error.message, error.code);
+}
+
+export async function getCrewChatId(crewId: string): Promise<string | null> {
+  const { data, error } = await client()
+    .from("crews")
+    .select("conversation_id")
+    .eq("id", crewId)
+    .maybeSingle();
+  if (error) throw new ApiError(error.message, error.code);
+  return (data?.conversation_id as string) ?? null;
 }

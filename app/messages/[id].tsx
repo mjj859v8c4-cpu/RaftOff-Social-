@@ -22,7 +22,7 @@ import {
   markConversationRead,
   sendMessage,
 } from "@/features/profiles/api";
-import { getConversationPeer, isBlockedPair } from "@/features/messages/api";
+import { getConversationHeader, isBlockedPair } from "@/features/messages/api";
 import { describeDmError } from "@/features/messages/errors";
 import { useUnreadMessages } from "@/features/messages/unread";
 import { getSupabase } from "@/lib/supabase/client";
@@ -36,6 +36,9 @@ export default function MessageThreadScreen() {
   const clearUnread = useUnreadMessages((s) => s.clearConversation);
 
   const [peer, setPeer] = useState<Profile | null>(null);
+  const [headerTitle, setHeaderTitle] = useState("Chat");
+  const [isGroup, setIsGroup] = useState(false);
+  const [memberCount, setMemberCount] = useState(0);
   const [messages, setMessages] = useState<DirectMessage[]>([]);
   const [body, setBody] = useState("");
   const [loading, setLoading] = useState(true);
@@ -50,18 +53,23 @@ export default function MessageThreadScreen() {
     setLoading(true);
     setError(null);
     try {
-      const [peerRow, rows] = await Promise.all([
-        getConversationPeer(conversationId, userId),
+      const [header, rows] = await Promise.all([
+        getConversationHeader(conversationId, userId),
         listMessages(conversationId),
       ]);
-      setPeer(peerRow);
+      setPeer(header?.peer ?? null);
+      setHeaderTitle(header?.title ?? "Chat");
+      setIsGroup(header?.kind === "group");
+      setMemberCount(header?.memberCount ?? 0);
       setMessages(rows);
       await markConversationRead(conversationId, userId);
       clearUnread(conversationId);
 
-      if (peerRow) {
-        const blocked = await isBlockedPair(userId, peerRow.id);
+      if (header?.peer) {
+        const blocked = await isBlockedPair(userId, header.peer.id);
         setRestricted(blocked ? describeDmError(new Error("messaging blocked")) : null);
+      } else if (header?.kind === "group") {
+        setRestricted(null);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load thread");
@@ -104,13 +112,14 @@ export default function MessageThreadScreen() {
   }, [conversationId, userId, clearUnread]);
 
   const onSend = async () => {
-    if (!conversationId || !userId || !peer || !body.trim() || sending) return;
+    if (!conversationId || !userId || !body.trim() || sending) return;
+    if (!isGroup && !peer) return;
     setSending(true);
     setError(null);
     try {
-      // Re-check messaging permission right before sending — a block or a
-      // privacy change since the thread was opened surfaces here.
-      await getOrCreateDm(peer.id);
+      if (!isGroup && peer) {
+        await getOrCreateDm(peer.id);
+      }
       const msg = await sendMessage(conversationId, userId, body);
       setBody("");
       setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
@@ -129,9 +138,10 @@ export default function MessageThreadScreen() {
   };
 
   const emptyHint = useMemo(() => {
+    if (isGroup) return "Start the crew chat — who's pulling up?";
     const first = peer?.display_name?.trim().split(/\s+/)[0];
     return first ? `No messages yet — say hey to ${first}.` : "No messages yet — say hey.";
-  }, [peer?.display_name]);
+  }, [peer?.display_name, isGroup]);
 
   return (
     <SafeAreaView style={styles.wrap} edges={["top", "bottom"]}>
@@ -139,8 +149,12 @@ export default function MessageThreadScreen() {
         <Pressable onPress={() => router.back()} hitSlop={12} style={styles.backBtn}>
           <Text style={styles.link}>‹ Back</Text>
         </Pressable>
-        <Pressable style={styles.peer} onPress={openProfile} disabled={!peer} hitSlop={8}>
-          {peer?.avatar_url ? (
+        <Pressable style={styles.peer} onPress={openProfile} disabled={!peer || isGroup} hitSlop={8}>
+          {isGroup ? (
+            <View style={[styles.avatar, styles.groupAvatar]}>
+              <Text style={styles.groupAvatarText}>⚓</Text>
+            </View>
+          ) : peer?.avatar_url ? (
             <Image source={{ uri: peer.avatar_url }} style={styles.avatar} />
           ) : (
             <View style={[styles.avatar, styles.avatarFallback]}>
@@ -149,14 +163,19 @@ export default function MessageThreadScreen() {
               </Text>
             </View>
           )}
-          <Text style={styles.title} numberOfLines={1}>
-            {peer?.display_name ?? "Chat"}
-          </Text>
+          <View style={{ flexShrink: 1 }}>
+            <Text style={styles.title} numberOfLines={1}>
+              {headerTitle}
+            </Text>
+            {isGroup ? (
+              <Text style={styles.subtitle}>{memberCount} captains</Text>
+            ) : null}
+          </View>
         </Pressable>
         <Pressable
           style={styles.more}
           onPress={() => setModOpen(true)}
-          disabled={!peer}
+          disabled={!peer || isGroup}
           hitSlop={12}
         >
           <Text style={styles.moreText}>•••</Text>
@@ -261,6 +280,15 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: "#fff", fontWeight: "800", fontSize: 12 },
   title: { color: colors.text, fontWeight: "800", fontSize: 16, flexShrink: 1 },
+  subtitle: { color: colors.muted, fontSize: 11 },
+  groupAvatar: {
+    backgroundColor: "rgba(255,61,130,0.2)",
+    borderWidth: 1,
+    borderColor: "rgba(255,61,130,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  groupAvatarText: { fontSize: 14 },
   link: { color: colors.muted, fontWeight: "600" },
   more: { minWidth: 32, alignItems: "flex-end" },
   moreText: { color: colors.text, fontWeight: "800" },
