@@ -216,6 +216,137 @@ a {
   font-weight: 600;
 }
 
+/* Hot panel — ranked lake activity */
+.hot-panel {
+  margin-bottom: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(255, 61, 130, 0.35);
+  border-radius: 0.65rem;
+  background:
+    linear-gradient(135deg, rgba(255, 61, 130, 0.1) 0%, rgba(5, 4, 10, 0.6) 55%),
+    rgba(18, 16, 26, 0.85);
+}
+
+.hot-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.hot-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.hot-panel-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--active);
+}
+
+.hot-rank-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.hot-rank-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.hot-rank-num {
+  flex: 0 0 1.25rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--action-strong);
+  text-align: center;
+}
+
+.hot-rank-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.hot-rank-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.hot-rank-name {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hot-rank-count {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.hot-intensity {
+  display: flex;
+  gap: 0.2rem;
+  align-items: flex-end;
+  height: 0.55rem;
+}
+
+.hot-bar {
+  flex: 1;
+  max-width: 1.1rem;
+  height: 0.22rem;
+  border-radius: 1px;
+  background: rgba(247, 244, 255, 0.12);
+  transition: height 0.2s ease, background 0.2s ease;
+}
+
+.hot-bar.is-on {
+  background: linear-gradient(180deg, var(--action-strong), var(--action));
+}
+
+.hot-bar.is-on:nth-child(1) { height: 0.22rem; }
+.hot-bar.is-on:nth-child(2) { height: 0.28rem; }
+.hot-bar.is-on:nth-child(3) { height: 0.34rem; }
+.hot-bar.is-on:nth-child(4) { height: 0.4rem; }
+.hot-bar.is-on:nth-child(5) { height: 0.46rem; }
+
+.hot-rank-pct {
+  flex: 0 0 2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-align: right;
+}
+
+.hot-rank-empty {
+  font-size: 0.82rem;
+  color: var(--muted);
+  padding: 0.25rem 0;
+}
+
 .filter-row {
   display: flex;
   gap: 0.4rem;

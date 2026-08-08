@@ -8,6 +8,7 @@ import { MapFilters } from "@/components/map/MapFilters";
 import { LakeSummaryCard } from "@/components/map/LakeSummaryCard";
 import { DiningStrip } from "@/components/map/DiningStrip";
 import { LakeSwitcher } from "@/components/map/LakeSwitcher";
+import { useListHotspots } from "@/lib/api/hotspots";
 import { useRaftOffStore } from "@/features/map/store";
 import { colors, spacing } from "@/lib/theme";
 import { LoadingState } from "@/components/ui/States";
@@ -26,7 +27,17 @@ export default function MapScreen() {
   const status = useRaftOffStore((s) => s.status);
   const summary = useRaftOffStore((s) => s.getSummary());
   const cacheUpdatedAt = useRaftOffStore((s) => s.cacheUpdatedAt);
+  const { data: hotspots } = useListHotspots();
   const [vibeFilter, setVibeFilter] = useState("all");
+
+  const hotSpots = useMemo(
+    () =>
+      [...(hotspots ?? [])]
+        .filter((h) => h.boatCount > 0)
+        .sort((a, b) => b.boatCount - a.boatCount)
+        .map((h) => ({ name: h.name, count: h.boatCount })),
+    [hotspots]
+  );
 
   const selectedLocation = useMemo(
     () => locations.find((l) => l.id === selectedLocationId) ?? null,
@@ -71,6 +82,7 @@ export default function MapScreen() {
             activeCheckIns={summary.active_check_ins}
             activeHotspots={summary.active_hotspots}
             topSpot={summary.top_spot}
+            hotSpots={hotSpots}
             updatedLabel={
               cacheUpdatedAt ? new Date(cacheUpdatedAt).toLocaleTimeString() : "now"
             }

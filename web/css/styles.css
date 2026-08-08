@@ -345,6 +345,94 @@ a {
   max-width: 32rem;
 }
 
+/* —— Social profile flow —— */
+.social-profile {
+  padding: 5rem var(--pad);
+  background:
+    radial-gradient(ellipse 70% 50% at 15% 0%, rgba(46, 242, 200, 0.08), transparent 55%),
+    radial-gradient(ellipse 60% 45% at 85% 100%, rgba(255, 61, 130, 0.1), transparent 50%),
+    linear-gradient(180deg, #0a0810 0%, var(--deep) 100%);
+}
+
+.social-profile-inner {
+  max-width: 40rem;
+  animation: rise-in 0.9s var(--ease) both;
+}
+
+.social-profile h2 {
+  margin: 0 0 0.9rem;
+  font-family: var(--font-display);
+  font-size: clamp(2.1rem, 4.5vw, 3.1rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+  color: var(--foam);
+}
+
+.social-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 2.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.social-flow::-webkit-scrollbar {
+  display: none;
+}
+
+.flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+  min-width: 4.5rem;
+}
+
+.flow-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  color: var(--mint);
+  background: rgba(46, 242, 200, 0.08);
+  border: 1px solid rgba(46, 242, 200, 0.22);
+}
+
+.flow-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(247, 244, 255, 0.65);
+  white-space: nowrap;
+}
+
+.flow-connector {
+  flex: 0 0 1.75rem;
+  height: 1px;
+  margin-bottom: 1.4rem;
+  background: linear-gradient(90deg, rgba(46, 242, 200, 0.35), rgba(255, 61, 130, 0.35));
+}
+
+@media (min-width: 640px) {
+  .social-flow {
+    justify-content: flex-start;
+  }
+
+  .flow-connector {
+    flex: 1 1 2rem;
+    max-width: 3.5rem;
+  }
+}
+
 .section {
   padding: 5rem var(--pad);
   background: var(--deep);

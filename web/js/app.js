@@ -151,6 +151,54 @@
       endsAt: Date.now() + 40 * 60000,
       toFeed: true,
     },
+    {
+      id: "c6",
+      author: "Chris",
+      placeId: "strawberry-island",
+      vibe: "party",
+      message: "Music bumping — more boats rolling in.",
+      audience: "public",
+      precision: "place",
+      createdAt: Date.now() - 5 * 60000,
+      endsAt: Date.now() + 100 * 60000,
+      toFeed: true,
+    },
+    {
+      id: "c7",
+      author: "Taylor",
+      placeId: "strawberry-island",
+      vibe: "sports",
+      message: "Wakesurf session off the sandbar.",
+      audience: "public",
+      precision: "place",
+      createdAt: Date.now() - 18 * 60000,
+      endsAt: Date.now() + 80 * 60000,
+      toFeed: true,
+    },
+    {
+      id: "c8",
+      author: "Drew",
+      placeId: "gull-island",
+      vibe: "chill",
+      message: "Low-key hang — bring your own cooler.",
+      audience: "public",
+      precision: "place",
+      createdAt: Date.now() - 15 * 60000,
+      endsAt: Date.now() + 95 * 60000,
+      toFeed: true,
+    },
+    {
+      id: "c9",
+      author: "Casey",
+      placeId: "st-clair-flats",
+      vibe: "fishing",
+      message: "Perch bite picking up in the flats.",
+      audience: "public",
+      precision: "approx",
+      createdAt: Date.now() - 22 * 60000,
+      endsAt: Date.now() + 75 * 60000,
+      toFeed: true,
+    },
   ];
 
   /** Demo profiles for check-in authors (web preview — no live API) */
@@ -736,11 +784,74 @@
     active.forEach(function (c) {
       hotspot[c.placeId] = (hotspot[c.placeId] || 0) + 1;
     });
-    var top = Object.keys(hotspot).sort(function (a, b) {
-      return hotspot[b] - hotspot[a];
-    })[0];
-    if (hotEl) hotEl.textContent = top ? placeById(top).name : "—";
+    var ranked = Object.keys(hotspot)
+      .map(function (id) {
+        return { id: id, count: hotspot[id] };
+      })
+      .sort(function (a, b) {
+        return b.count - a.count;
+      });
+    var top = ranked[0];
+    if (hotEl) hotEl.textContent = top ? placeById(top.id).name : "—";
     if (updatedEl) updatedEl.textContent = "just now";
+    renderHotPanel(ranked, active.length);
+  }
+
+  function intensityLevel(count, max) {
+    if (!max) return 1;
+    var ratio = count / max;
+    if (ratio >= 0.85) return 5;
+    if (ratio >= 0.65) return 4;
+    if (ratio >= 0.45) return 3;
+    if (ratio >= 0.25) return 2;
+    return 1;
+  }
+
+  function renderHotPanel(ranked, totalActive) {
+    var list = $("hot-rank-list");
+    if (!list) return;
+    if (!ranked.length) {
+      list.innerHTML = '<li class="hot-rank-empty">No active check-ins yet — be first on the map.</li>';
+      return;
+    }
+    var max = ranked[0].count;
+    list.innerHTML = ranked
+      .slice(0, 5)
+      .map(function (row, i) {
+        var place = placeById(row.id);
+        var level = intensityLevel(row.count, max);
+        var pct = totalActive ? Math.round((row.count / totalActive) * 100) : 0;
+        return (
+          '<li class="hot-rank-item">' +
+          '<span class="hot-rank-num">' +
+          (i + 1) +
+          "</span>" +
+          '<div class="hot-rank-body">' +
+          '<div class="hot-rank-row">' +
+          '<span class="hot-rank-name">' +
+          escapeHtml(place.name) +
+          "</span>" +
+          '<span class="hot-rank-count">' +
+          row.count +
+          " check-in" +
+          (row.count === 1 ? "" : "s") +
+          "</span>" +
+          "</div>" +
+          '<div class="hot-intensity" aria-hidden="true">' +
+          [1, 2, 3, 4, 5]
+            .map(function (n) {
+              return '<span class="hot-bar' + (n <= level ? " is-on" : "") + '"></span>';
+            })
+            .join("") +
+          "</div>" +
+          "</div>" +
+          '<span class="hot-rank-pct">' +
+          pct +
+          "%</span>" +
+          "</li>"
+        );
+      })
+      .join("");
   }
 
   function renderPlaces() {
