@@ -474,6 +474,10 @@ const styles = StyleSheet.create({
   onWaterPillText: { color: colors.chill, fontSize: 13, fontWeight: "700" },
   bio: { color: colors.muted, marginTop: 10, lineHeight: 20 },
   safety: { marginTop: 10 },
+  statsWrap: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: 12,
+  },
   statsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
