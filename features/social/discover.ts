@@ -62,7 +62,11 @@ export async function peopleByIdentityTag(tag: string, limit = 20): Promise<Disc
   return (data ?? []) as DiscoverPerson[];
 }
 
-/** Suggested connection scoring (§29): same lake + shared interests + mutuals + has photo. */
+/**
+ * Suggested connection scoring (§29): same lake +40, same marina +20,
+ * mutual connections +15 each, shared interests +10 each, shared boat
+ * manufacturer +5.
+ */
 export async function suggestedConnections(limit = 20): Promise<DiscoverPerson[]> {
   const { data, error } = await client().rpc("suggested_connections", { p_limit: limit });
   if (error) throw new ApiError(error.message, error.code);

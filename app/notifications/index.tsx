@@ -32,10 +32,12 @@ function iconFor(type: string): string {
       return "✅";
     case "new_follower":
       return "⭐";
-    case "like":
+    case "post_like":
       return "❤️";
-    case "comment":
+    case "post_comment":
       return "💬";
+    case "checkin_nearby":
+      return "⚓";
     default:
       return "🔔";
   }
@@ -78,6 +80,10 @@ export default function NotificationsScreen() {
       router.push(`/u/${n.actor.username}` as never);
       return;
     }
+    if (n.type === "checkin_nearby") {
+      router.push("/(tabs)/map" as never);
+      return;
+    }
     if (n.actor?.username) {
       router.push(`/u/${n.actor.username}` as never);
     }
@@ -117,9 +123,20 @@ export default function NotificationsScreen() {
           keyExtractor={(n) => n.id}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.empty}>
-              No notifications yet. Connection requests, accepts, and new followers will show up here.
-            </Text>
+            <View style={styles.empty}>
+              <Text style={styles.emptyIcon}>🔔</Text>
+              <Text style={styles.emptyTitle}>All caught up</Text>
+              <Text style={styles.emptyBody}>
+                Connection requests, accepts, new followers, and nearby check-ins from your crew
+                will show up here. Add a few connections to get the water buzzing.
+              </Text>
+              <Pressable
+                style={styles.emptyBtn}
+                onPress={() => router.push("/(tabs)/discover" as never)}
+              >
+                <Text style={styles.emptyBtnText}>Find people</Text>
+              </Pressable>
+            </View>
           }
           renderItem={({ item }) => (
             <Pressable
@@ -186,6 +203,17 @@ const styles = StyleSheet.create({
   notifBody: { color: colors.muted, fontSize: 12.5, marginTop: 2, lineHeight: 17 },
   time: { color: colors.muted, fontSize: 11, marginTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.action },
-  empty: { color: colors.muted, textAlign: "center", marginTop: 40, lineHeight: 20 },
+  empty: { alignItems: "center", marginTop: 56, paddingHorizontal: spacing.lg, gap: 8 },
+  emptyIcon: { fontSize: 32, marginBottom: 4 },
+  emptyTitle: { color: colors.text, fontWeight: "800", fontSize: 16 },
+  emptyBody: { color: colors.muted, textAlign: "center", lineHeight: 20 },
+  emptyBtn: {
+    marginTop: 8,
+    backgroundColor: colors.action,
+    borderRadius: 999,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  emptyBtnText: { color: "#fff", fontWeight: "800" },
   error: { color: "#ff8fa8", paddingHorizontal: spacing.lg, marginBottom: 4 },
 });

@@ -320,19 +320,95 @@ export async function listComments(postId: string, limit?: number) {
 }
 
 /** Events */
-export async function listEvents(lakeId: string): Promise<LakeEvent[]> {
+export async function listEvents(lakeId: string, userId?: string | null): Promise<LakeEvent[]> {
   assertOnline();
   const { data, error } = await client()
     .from("events")
-    .select("*, locations:location_id(id, slug, name, type), rsvps(count)")
+    .select("*, locations:location_id(id, slug, name, type), rsvps(user_id, state)")
     .eq("lake_id", lakeId)
     .neq("status", "canceled")
     .order("starts_at", { ascending: true });
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? []).map((row: any) => {
+    const rows = (row.rsvps ?? []) as { user_id: string; state: string }[];
+    const mine = userId ? rows.find((r) => r.user_id === userId) : undefined;
+    return {
+      ...row,
+      location: row.locations,
+      rsvp_count: rows.filter((r) => r.state === "going").length,
+      interested_count: rows.filter((r) => r.state === "interested").length,
+      going: mine?.state === "going",
+      interested: mine?.state === "interested",
+    };
+  }) as LakeEvent[];
+}
+
+/** Which of the given events some of my connections are RSVP'd "going" to — event_id -> people. */
+export async function listFriendsGoing(
+  eventIds: string[],
+  meId: string
+): Promise<Record<string, Pick<Profile, "id" | "username" | "display_name" | "avatar_url">[]>> {
+  if (!eventIds.length) return {};
+  const { data: connRows, error: connErr } = await client()
+    .from("connections")
+    .select("profile_a, profile_b")
+    .or(`profile_a.eq.${meId},profile_b.eq.${meId}`);
+  if (connErr) throw new ApiError(connErr.message, connErr.code);
+  const friendIds = (connRows ?? []).map((r) =>
+    (r.profile_a === meId ? r.profile_b : r.profile_a) as string
+  );
+  if (!friendIds.length) return {};
+
+  const { data, error } = await client()
+    .from("rsvps")
+    .select("event_id, profiles:user_id(id, username, display_name, avatar_url)")
+    .in("event_id", eventIds)
+    .eq("state", "going")
+    .in("user_id", friendIds);
+  if (error) throw new ApiError(error.message, error.code);
+
+  const grouped: Record<string, Pick<Profile, "id" | "username" | "display_name" | "avatar_url">[]> = {};
+  for (const row of (data ?? []) as any[]) {
+    const profile = row.profiles as Pick<Profile, "id" | "username" | "display_name" | "avatar_url"> | null;
+    if (!profile) continue;
+    (grouped[row.event_id] ??= []).push(profile);
+  }
+  return grouped;
+}
+
+/** Upcoming events a user is organizing or RSVP'd "going" to — powers the profile card. */
+export async function listUpcomingEventsForUser(
+  userId: string,
+  limit = 5
+): Promise<LakeEvent[]> {
+  assertOnline();
+  const nowIso = new Date().toISOString();
+  const { data: rsvpRows, error: rsvpErr } = await client()
+    .from("rsvps")
+    .select("event_id")
+    .eq("user_id", userId)
+    .eq("state", "going");
+  if (rsvpErr) throw new ApiError(rsvpErr.message, rsvpErr.code);
+  const rsvpEventIds = (rsvpRows ?? []).map((r) => r.event_id as string);
+
+  let query = client()
+    .from("events")
+    .select("*, locations:location_id(id, slug, name, type), rsvps(count)")
+    .neq("status", "canceled")
+    .gt("starts_at", nowIso)
+    .order("starts_at", { ascending: true })
+    .limit(limit);
+  query = rsvpEventIds.length
+    ? query.or(`organizer_id.eq.${userId},id.in.(${rsvpEventIds.join(",")})`)
+    : query.eq("organizer_id", userId);
+
+  const { data, error } = await query;
   if (error) throw new ApiError(error.message, error.code);
   return (data ?? []).map((row: any) => ({
     ...row,
     location: row.locations,
     rsvp_count: row.rsvps?.[0]?.count ?? 0,
+    going: rsvpEventIds.includes(row.id),
   })) as LakeEvent[];
 }
 
@@ -371,26 +447,28 @@ export async function createEvent(input: {
   return data as LakeEvent;
 }
 
-export async function rsvpEvent(eventId: string, userId: string, going: boolean) {
+export type RsvpState = "going" | "interested" | null;
+
+export async function rsvpEvent(eventId: string, userId: string, status: RsvpState) {
   assertOnline();
   const supabase = client();
-  if (!going) {
+  if (!status) {
     const { error } = await supabase
       .from("rsvps")
       .delete()
       .eq("event_id", eventId)
       .eq("user_id", userId);
     if (error) throw new ApiError(error.message, error.code);
-    return { going: false };
+    return { status: null as RsvpState };
   }
   const { error } = await supabase.from("rsvps").upsert({
     event_id: eventId,
     user_id: userId,
-    state: "going",
+    state: status,
   });
   if (error) throw new ApiError(error.message, error.code);
-  track("rsvp_event", { eventId });
-  return { going: true };
+  track("rsvp_event", { eventId, status });
+  return { status };
 }
 
 /** Boats */

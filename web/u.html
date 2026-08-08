@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#05040a" />
+  <meta name="robots" content="noindex" />
+  <meta property="og:type" content="profile" />
+  <meta property="og:site_name" content="RaftOff Social" />
+  <title id="page-title">Profile · RaftOff Social</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Syne:wght@700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .profile-stub {
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6rem 1.25rem 3rem;
+      gap: 1rem;
+    }
+    .profile-stub .avatar-fallback {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: Syne, sans-serif;
+      font-weight: 800;
+      font-size: 1.6rem;
+      background: linear-gradient(135deg, #ff3d82, #2ef2c8);
+      color: #05040a;
+      margin-bottom: 0.5rem;
+    }
+    .profile-stub h1 {
+      font-family: Syne, sans-serif;
+      font-size: 1.6rem;
+      margin: 0;
+    }
+    .profile-stub p {
+      color: #9db3c4;
+      max-width: 26rem;
+      margin: 0;
+    }
+    .profile-stub .cta-row {
+      margin-top: 1rem;
+    }
+    .profile-stub .fallback-note {
+      font-size: 0.82rem;
+      color: rgba(157, 179, 196, 0.75);
+    }
+  </style>
+</head>
+<body class="home">
+  <header class="site-header">
+    <a class="logo" href="index.html">RaftOff Social</a>
+    <nav class="nav" aria-label="Primary">
+      <a class="nav-cta" href="app.html" data-track="web_cta" data-cta="profile_stub_open_app">Open free demo</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="profile-stub">
+      <div class="avatar-fallback" id="avatar-fallback">?</div>
+      <h1 id="profile-heading">Loading profile…</h1>
+      <p id="profile-copy">
+        RaftOff Social profiles open right inside the app — live map, boats, connections, and posts.
+      </p>
+      <div class="cta-row">
+        <a class="btn btn-primary" id="open-app-link" href="app.html" data-track="web_cta" data-cta="profile_stub_deep_link">
+          Open in RaftOff Social
+        </a>
+      </div>
+      <p class="fallback-note">Don't have the app yet? The link above opens the free web demo.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 2026 RaftOff Social · Not a navigation product</p>
+    <p>
+      <a href="about.html">About</a> ·
+      <a href="privacy.html">Privacy</a> ·
+      <a href="terms.html">Terms</a> ·
+      <a href="guidelines.html">Guidelines</a>
+    </p>
+  </footer>
+
+  <script>
+    (function () {
+      function getUsername() {
+        var params = new URLSearchParams(window.location.search);
+        var fromQuery = params.get("username");
+        if (fromQuery) return fromQuery;
+        var m = window.location.pathname.match(/\/u\/([^/]+)\/?$/i);
+        return m ? decodeURIComponent(m[1]) : "";
+      }
+
+      var username = (getUsername() || "").replace(/^@/, "").trim();
+      var heading = document.getElementById("profile-heading");
+      var copy = document.getElementById("profile-copy");
+      var avatar = document.getElementById("avatar-fallback");
+      var openLink = document.getElementById("open-app-link");
+      var title = document.getElementById("page-title");
+
+      if (username) {
+        heading.textContent = "@" + username;
+        copy.textContent = "See @" + username + "'s boats, check-ins, and posts on RaftOff Social.";
+        avatar.textContent = username.slice(0, 2).toUpperCase();
+        title.textContent = "@" + username + " · RaftOff Social";
+
+        var meta = document.createElement("meta");
+        meta.setAttribute("property", "og:title");
+        meta.setAttribute("content", "@" + username + " on RaftOff Social");
+        document.head.appendChild(meta);
+
+        // Deep link into the native app; falls back to the web demo if it can't open.
+        var deepLink = "raftoff://u/" + encodeURIComponent(username);
+        openLink.setAttribute("href", deepLink);
+        openLink.addEventListener("click", function () {
+          setTimeout(function () {
+            window.location.href = "app.html";
+          }, 800);
+        });
+
+        // Best-effort auto-attempt on load (native apps intercept custom schemes silently).
+        try {
+          var iframe = document.createElement("iframe");
+          iframe.style.display = "none";
+          iframe.src = deepLink;
+          document.body.appendChild(iframe);
+        } catch (e) {}
+      } else {
+        heading.textContent = "Profile not found";
+        copy.textContent = "This RaftOff Social profile link looks incomplete.";
+      }
+    })();
+  </script>
+</body>
+</html>

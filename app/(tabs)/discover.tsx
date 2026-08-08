@@ -15,7 +15,7 @@ import { router } from "expo-router";
 import { colors, spacing } from "@/lib/theme";
 import { useAuthStore } from "@/features/auth/store";
 import { useRaftOffStore } from "@/features/map/store";
-import { getConnectionStatuses, listIncomingRequests } from "@/features/profiles/api";
+import { getConnectionStatuses, getPeopleDetails, listIncomingRequests, type PersonDetail } from "@/features/profiles/api";
 import { countUnreadNotifications } from "@/features/notifications/api";
 import {
   peopleByIdentityTag,
@@ -26,10 +26,11 @@ import {
   suggestedConnections,
   type DiscoverPerson,
 } from "@/features/social/discover";
-import { PersonCard, PersonRow } from "@/components/social/PersonRow";
+import { PersonCard, PersonRow, type PersonRowData } from "@/components/social/PersonRow";
 import type { ConnectionStatus } from "@/types/raftoff";
 
 type StatusMap = Record<string, { status: ConnectionStatus; requestId?: string }>;
+type DetailMap = Record<string, PersonDetail>;
 
 type Section = {
   key: string;
@@ -37,17 +38,6 @@ type Section = {
   subtitle?: string;
   people: DiscoverPerson[];
 };
-
-function toRowData(p: DiscoverPerson, extra?: string | null) {
-  return {
-    id: p.id,
-    username: p.username,
-    display_name: p.display_name,
-    avatar_url: p.avatar_url,
-    is_verified: p.is_verified,
-    subtitle: extra ?? (p.home_city ? p.home_city : `@${p.username}`),
-  };
-}
 
 export default function DiscoverScreen() {
   const meId = useAuthStore((s) => s.session?.user?.id);
@@ -57,6 +47,10 @@ export default function DiscoverScreen() {
     lakes.find((l) => l.id === myProfile?.home_lake_id)?.name ??
     lakes.find((l) => l.id === useRaftOffStore.getState().activeLakeId)?.name ??
     "your lake";
+  const lakeNameById = useMemo(
+    () => Object.fromEntries(lakes.map((l) => [l.id, l.name])) as Record<string, string>,
+    [lakes]
+  );
 
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<DiscoverPerson[]>([]);
@@ -66,9 +60,40 @@ export default function DiscoverScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [statuses, setStatuses] = useState<StatusMap>({});
+  const [details, setDetails] = useState<DetailMap>({});
   const [pendingCount, setPendingCount] = useState(0);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const applyDetails = useCallback(async (people: DiscoverPerson[]) => {
+    if (!people.length) return;
+    try {
+      const map = await getPeopleDetails(people.map((p) => p.id));
+      setDetails((prev) => ({ ...prev, ...map }));
+    } catch {
+      // Non-fatal — rows fall back to lake/handle subtitle without chips.
+    }
+  }, []);
+
+  const toRowData = useCallback(
+    (p: DiscoverPerson, extra?: string | null): PersonRowData => {
+      const detail = details[p.id];
+      const lakeFromId = p.home_lake_id ? lakeNameById[p.home_lake_id] : null;
+      return {
+        id: p.id,
+        username: p.username,
+        display_name: p.display_name,
+        avatar_url: p.avatar_url,
+        is_verified: p.is_verified,
+        subtitle: extra ?? (p.home_city ? p.home_city : `@${p.username}`),
+        lakeName: lakeFromId ?? null,
+        boatLabel: detail?.boatLabel ?? null,
+        interestLabels: detail?.interestLabels ?? [],
+        mutualCount: p.mutual_count,
+      };
+    },
+    [details, lakeNameById]
+  );
 
   const applyStatuses = useCallback(
     async (people: DiscoverPerson[]) => {
@@ -100,8 +125,18 @@ export default function DiscoverScreen() {
           countUnreadNotifications(meId).catch(() => 0),
         ]);
 
+      const mutual = suggested.filter((p) => (p.mutual_count ?? 0) > 0);
+      const mutualIds = new Set(mutual.map((p) => p.id));
+      const suggestedRest = suggested.filter((p) => !mutualIds.has(p.id));
+
       const next: Section[] = [
-        { key: "suggested", title: "Suggested for you", people: suggested },
+        {
+          key: "mutual",
+          title: "Mutual connections",
+          subtitle: "People who know people you know",
+          people: mutual,
+        },
+        { key: "suggested", title: "Suggested for you", people: suggestedRest },
         { key: "lake", title: `People on ${lakeName}`, people: onLake },
         { key: "interests", title: "Similar interests", people: shared },
         {
@@ -119,14 +154,14 @@ export default function DiscoverScreen() {
       setUnreadNotifs(unread);
 
       const allPeople = next.flatMap((s) => s.people);
-      await applyStatuses(allPeople);
+      await Promise.all([applyStatuses(allPeople), applyDetails(allPeople)]);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load discovery");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [meId, lakeName, applyStatuses]);
+  }, [meId, lakeName, applyStatuses, applyDetails]);
 
   useEffect(() => {
     void load();
@@ -144,14 +179,14 @@ export default function DiscoverScreen() {
       try {
         const found = await searchPeople(term, 25);
         setSearchResults(found);
-        await applyStatuses(found);
+        await Promise.all([applyStatuses(found), applyDetails(found)]);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Search failed");
       } finally {
         setSearching(false);
       }
     },
-    [applyStatuses]
+    [applyStatuses, applyDetails]
   );
 
   useEffect(() => {
@@ -181,6 +216,13 @@ export default function DiscoverScreen() {
       <View style={styles.top}>
         <Text style={styles.title}>Discover</Text>
         <View style={styles.topActions}>
+          <Pressable
+            style={styles.checkInBtn}
+            hitSlop={10}
+            onPress={() => router.push("/(tabs)/drop-anchor" as never)}
+          >
+            <Text style={styles.checkInBtnText}>⚓ Check in</Text>
+          </Pressable>
           <Pressable
             style={styles.iconBtn}
             hitSlop={10}
@@ -233,7 +275,14 @@ export default function DiscoverScreen() {
             searching ? <ActivityIndicator color={colors.action} style={{ marginBottom: 12 }} /> : null
           }
           ListEmptyComponent={
-            !searching ? <Text style={styles.empty}>No boaters match “{query.trim()}”.</Text> : null
+            !searching ? (
+              <View style={styles.emptyWrap}>
+                <Text style={styles.empty}>No boaters match “{query.trim()}”.</Text>
+                <Text style={styles.emptySub}>
+                  Try a first name, @handle, home lake, marina, boat name, or interest.
+                </Text>
+              </View>
+            ) : null
           }
           renderItem={({ item }) => (
             <PersonRow
@@ -254,11 +303,16 @@ export default function DiscoverScreen() {
         >
           {sections.length === 0 ? (
             <View style={styles.intro}>
-              <Text style={styles.introTitle}>Find your crew on {lakeName}</Text>
+              <Text style={styles.introTitle}>No one to show here yet</Text>
               <Text style={styles.introBody}>
-                Add a home lake and a few interests on your profile to unlock personalized
-                suggestions here.
+                {lakeName === "your lake"
+                  ? "Set a home lake and pick a few interests on your profile — that’s how we match you with people nearby."
+                  : `We couldn’t find anyone on ${lakeName} yet. Add a boat, interests, or a bio so people can find you too, and check back soon.`}
               </Text>
+              <Pressable style={styles.entryPrimary} onPress={() => router.push("/profile/edit" as never)}>
+                <Text style={styles.entryPrimaryTitle}>Complete your profile</Text>
+                <Text style={styles.entryPrimaryBody}>Boat, interests & lake unlock better matches</Text>
+              </Pressable>
               <Pressable style={styles.entry} onPress={() => router.push("/(tabs)/map" as never)}>
                 <Text style={styles.entryTitle}>Who’s on the water</Text>
                 <Text style={styles.entryBody}>See live check-ins on the map</Text>
@@ -272,6 +326,7 @@ export default function DiscoverScreen() {
             sections.map((section) => (
               <View key={section.key} style={styles.section}>
                 <Text style={styles.sectionTitle}>{section.title}</Text>
+                {section.subtitle ? <Text style={styles.sectionSubtitle}>{section.subtitle}</Text> : null}
                 <FlatList
                   data={section.people}
                   keyExtractor={(p) => p.id}
@@ -307,7 +362,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   title: { color: colors.text, fontWeight: "800", fontSize: 20 },
-  topActions: { flexDirection: "row", gap: 14 },
+  topActions: { flexDirection: "row", alignItems: "center", gap: 14 },
+  checkInBtn: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  checkInBtnText: { color: colors.text, fontWeight: "800", fontSize: 12 },
   iconBtn: { alignItems: "center", justifyContent: "center" },
   icon: { fontSize: 20 },
   badge: {
@@ -337,6 +400,12 @@ const styles = StyleSheet.create({
   sections: { paddingTop: 4, paddingBottom: 40, gap: 18 },
   section: { gap: 10 },
   sectionTitle: { color: colors.text, fontWeight: "800", fontSize: 15, paddingHorizontal: spacing.lg },
+  sectionSubtitle: {
+    color: colors.muted,
+    fontSize: 12,
+    paddingHorizontal: spacing.lg,
+    marginTop: -6,
+  },
   cardRow: { paddingHorizontal: spacing.lg, gap: 10 },
   intro: { gap: 10, paddingTop: 8, paddingHorizontal: spacing.lg },
   introTitle: { color: colors.text, fontWeight: "800", fontSize: 16 },
@@ -351,6 +420,18 @@ const styles = StyleSheet.create({
   },
   entryTitle: { color: colors.text, fontWeight: "800" },
   entryBody: { color: colors.muted, fontSize: 12 },
-  empty: { color: colors.muted, textAlign: "center", marginTop: 30 },
+  entryPrimary: {
+    borderWidth: 1,
+    borderColor: "rgba(255,61,130,0.4)",
+    borderRadius: 14,
+    padding: 14,
+    gap: 3,
+    backgroundColor: "rgba(255,61,130,0.12)",
+  },
+  entryPrimaryTitle: { color: colors.text, fontWeight: "800" },
+  entryPrimaryBody: { color: colors.muted, fontSize: 12 },
+  empty: { color: colors.muted, textAlign: "center" },
+  emptyWrap: { gap: 6, marginTop: 30, paddingHorizontal: spacing.lg },
+  emptySub: { color: colors.muted, textAlign: "center", fontSize: 12, opacity: 0.85 },
   error: { color: "#ff8fa8", paddingHorizontal: spacing.lg, marginBottom: 4 },
 });

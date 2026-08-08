@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -17,6 +18,7 @@ import { useAuthStore } from "@/features/auth/store";
 import { useRaftOffStore } from "@/features/map/store";
 import {
   addProfilePhoto,
+  deleteMyAccount,
   deleteMyBoat,
   deleteProfilePhoto,
   getFullProfile,
@@ -26,13 +28,21 @@ import {
   listProfilePhotos,
   reorderProfilePhotos,
   setMyInterests,
+  setPrimaryBoat,
   updateMyProfile,
   upsertMyBoat,
   listBoatsForUser,
 } from "@/features/profiles/api";
+import { listBlockedUsers, unblockUser } from "@/features/moderation/api";
 import { pickAndCompressImage, uploadPhoto } from "@/lib/media/upload";
 import type { Boat, Interest, Profile, ProfilePhoto } from "@/types/raftoff";
 import { PhotoGallery } from "@/components/profile/PhotoGallery";
+import { BOATING_BADGES, mergeBadgeSelection, selectableBadgesFrom } from "@/lib/profile/badges";
+
+type BlockedUser = {
+  blocked_id: string;
+  profiles?: { id: string; username: string; display_name: string; avatar_url: string | null } | null;
+};
 
 const VISIBILITY_OPTIONS = [
   ["everyone", "Everyone"],
@@ -49,6 +59,7 @@ const MESSAGE_OPTIONS = [
 export default function EditProfileScreen() {
   const session = useAuthStore((s) => s.session);
   const refreshProfile = useAuthStore((s) => s.refreshProfile);
+  const signOut = useAuthStore((s) => s.signOut);
   const authProfile = useAuthStore((s) => s.profile);
   const lakes = useRaftOffStore((s) => s.lakes);
   const userId = session?.user?.id;
@@ -67,6 +78,8 @@ export default function EditProfileScreen() {
   const [interests, setInterests] = useState<Interest[]>([]);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [boats, setBoats] = useState<Boat[]>([]);
+  const [editingBoat, setEditingBoat] = useState<Boat | "new" | null>(null);
+  const [savingBoat, setSavingBoat] = useState(false);
   const [boatName, setBoatName] = useState("");
   const [boatMake, setBoatMake] = useState("");
   const [boatModel, setBoatModel] = useState("");
@@ -76,6 +89,7 @@ export default function EditProfileScreen() {
   const [boatColor, setBoatColor] = useState("");
   const [boatDescription, setBoatDescription] = useState("");
   const [boatPhotoUrl, setBoatPhotoUrl] = useState<string | null>(null);
+  const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
@@ -86,6 +100,7 @@ export default function EditProfileScreen() {
   const [showBoat, setShowBoat] = useState(true);
   const [showOnline, setShowOnline] = useState(false);
   const [allowConnectionRequests, setAllowConnectionRequests] = useState(true);
+  const [showInDiscovery, setShowInDiscovery] = useState(true);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +109,10 @@ export default function EditProfileScreen() {
   const [showWaterLife, setShowWaterLife] = useState(false);
   const [showPhotos, setShowPhotos] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!userId || !authProfile) return;
@@ -117,19 +136,22 @@ export default function EditProfileScreen() {
     }
     void (async () => {
       try {
-        const [tags, ints, mine, myBoats, myPhotos, fullProfile] = await Promise.all([
+        const [tags, ints, mine, myBoats, myPhotos, fullProfile, blocked] = await Promise.all([
           listIdentityTags(),
           listInterests(),
           listMyInterests(userId),
           listBoatsForUser(userId),
           listProfilePhotos(userId).catch(() => [] as ProfilePhoto[]),
           getFullProfile(userId).catch(() => null as Profile | null),
+          listBlockedUsers(userId).catch(() => [] as BlockedUser[]),
         ]);
         setIdentityCatalog(tags);
         setInterests(ints);
         setSelectedInterests(mine);
         setBoats(myBoats);
         setPhotos(myPhotos);
+        setBlockedUsers(blocked as BlockedUser[]);
+        setSelectedBadges(selectableBadgesFrom(fullProfile?.badges ?? authProfile.badges));
         if (myPhotos.length) setShowPhotos(true);
         if (fullProfile) {
           setProfileVisibility(fullProfile.profile_visibility ?? "everyone");
@@ -139,20 +161,9 @@ export default function EditProfileScreen() {
           setShowBoat(fullProfile.show_boat ?? true);
           setShowOnline(fullProfile.show_online ?? false);
           setAllowConnectionRequests(fullProfile.allow_connection_requests ?? true);
+          setShowInDiscovery(fullProfile.show_in_discovery ?? true);
         }
-        const primary = myBoats.find((b) => b.is_primary) ?? myBoats[0];
-        if (primary) {
-          setBoatName(primary.name ?? primary.nickname ?? "");
-          setBoatMake(primary.manufacturer ?? primary.make ?? "");
-          setBoatModel(primary.model ?? "");
-          setBoatType(primary.boat_type ?? "");
-          setBoatYear(primary.year ? String(primary.year) : "");
-          setBoatLength(primary.length_ft ? String(primary.length_ft) : "");
-          setBoatColor(primary.primary_color ?? "");
-          setBoatDescription(primary.description ?? "");
-          setBoatPhotoUrl(primary.photo_url ?? null);
-          setShowWaterLife(true);
-        } else if (mine.length || (authProfile.identity_tags?.length ?? 0) > 0) {
+        if (myBoats.length || mine.length || (authProfile.identity_tags?.length ?? 0) > 0) {
           setShowWaterLife(true);
         }
       } catch (e) {
@@ -162,6 +173,50 @@ export default function EditProfileScreen() {
       }
     })();
   }, [userId, authProfile, lakes]);
+
+  const unblock = useCallback(
+    async (blockedId: string) => {
+      if (!userId) return;
+      setUnblockingId(blockedId);
+      try {
+        await unblockUser(userId, blockedId);
+        setBlockedUsers((prev) => prev.filter((b) => b.blocked_id !== blockedId));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Could not unblock");
+      } finally {
+        setUnblockingId(null);
+      }
+    },
+    [userId]
+  );
+
+  const confirmDeleteAccount = useCallback(() => {
+    Alert.alert(
+      "Delete account",
+      "This removes your photos, hides your profile, and signs you out. This can't be undone from the app.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete account",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setDeletingAccount(true);
+              setError(null);
+              try {
+                await deleteMyAccount();
+                await signOut();
+                router.replace("/(auth)/login" as never);
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Could not delete account");
+                setDeletingAccount(false);
+              }
+            })();
+          },
+        },
+      ]
+    );
+  }, [signOut]);
 
   const uploadProfileImage = useCallback(
     async (kind: "avatar" | "cover") => {
@@ -178,6 +233,7 @@ export default function EditProfileScreen() {
           purpose: "profile",
           entityType: kind,
           entityId: userId,
+          skipCompress: true,
         });
         const patch =
           kind === "avatar" ? { avatar_url: uploaded.url } : { cover_url: uploaded.url };
@@ -194,6 +250,41 @@ export default function EditProfileScreen() {
     [userId, refreshProfile]
   );
 
+  const clearBoatForm = useCallback(() => {
+    setBoatName("");
+    setBoatMake("");
+    setBoatModel("");
+    setBoatType("");
+    setBoatYear("");
+    setBoatLength("");
+    setBoatColor("");
+    setBoatDescription("");
+    setBoatPhotoUrl(null);
+  }, []);
+
+  const startAddBoat = useCallback(() => {
+    clearBoatForm();
+    setEditingBoat("new");
+  }, [clearBoatForm]);
+
+  const startEditBoat = useCallback((boat: Boat) => {
+    setBoatName(boat.name ?? boat.nickname ?? "");
+    setBoatMake(boat.manufacturer ?? boat.make ?? "");
+    setBoatModel(boat.model ?? "");
+    setBoatType(boat.boat_type ?? "");
+    setBoatYear(boat.year ? String(boat.year) : "");
+    setBoatLength(boat.length_ft ? String(boat.length_ft) : "");
+    setBoatColor(boat.primary_color ?? "");
+    setBoatDescription(boat.description ?? "");
+    setBoatPhotoUrl(boat.photo_url ?? null);
+    setEditingBoat(boat);
+  }, []);
+
+  const cancelBoatEditor = useCallback(() => {
+    setEditingBoat(null);
+    clearBoatForm();
+  }, [clearBoatForm]);
+
   const uploadBoatPhoto = useCallback(async () => {
     if (!userId) return;
     setUploadingKind("boat");
@@ -201,14 +292,15 @@ export default function EditProfileScreen() {
     try {
       const picked = await pickAndCompressImage({ allowsEditing: true });
       if (!picked) return;
-      const existing = boats.find((b) => b.is_primary) ?? boats[0];
+      const entityId = editingBoat && editingBoat !== "new" ? editingBoat.id : userId;
       const uploaded = await uploadPhoto({
         userId,
         bucket: "boat-photos",
         uri: picked.uri,
         purpose: "boat",
         entityType: "boat",
-        entityId: existing?.id ?? userId,
+        entityId,
+        skipCompress: true,
       });
       setBoatPhotoUrl(uploaded.url);
     } catch (e) {
@@ -216,34 +308,108 @@ export default function EditProfileScreen() {
     } finally {
       setUploadingKind(null);
     }
-  }, [userId, boats]);
+  }, [userId, editingBoat]);
 
-  const removeBoat = useCallback(async () => {
-    const clearFields = () => {
-      setBoatName("");
-      setBoatMake("");
-      setBoatModel("");
-      setBoatType("");
-      setBoatYear("");
-      setBoatLength("");
-      setBoatColor("");
-      setBoatDescription("");
-      setBoatPhotoUrl(null);
-    };
-    const existing = boats.find((b) => b.is_primary) ?? boats[0];
-    if (!userId || !existing) {
-      clearFields();
-      return;
-    }
+  const saveBoatForm = useCallback(async () => {
+    if (!userId || !boatName.trim()) return;
+    setSavingBoat(true);
     setError(null);
     try {
-      await deleteMyBoat(existing.id, userId);
-      setBoats((prev) => prev.filter((b) => b.id !== existing.id));
-      clearFields();
+      const existing = editingBoat && editingBoat !== "new" ? editingBoat : null;
+      const saved = await upsertMyBoat({
+        id: existing?.id,
+        ownerId: userId,
+        nickname: boatName.trim(),
+        name: boatName.trim(),
+        manufacturer: boatMake.trim() || undefined,
+        model: boatModel.trim() || undefined,
+        boatType: boatType.trim() || undefined,
+        year: boatYear.trim() ? parseInt(boatYear, 10) : undefined,
+        lengthFt: boatLength.trim() ? parseFloat(boatLength) : undefined,
+        primaryColor: boatColor.trim() || undefined,
+        description: boatDescription.trim() || undefined,
+        photoUrl: boatPhotoUrl ?? undefined,
+        isPrimary: existing ? !!existing.is_primary : boats.length === 0,
+      });
+      setBoats((prev) => {
+        const merged = existing
+          ? prev.map((b) => (b.id === saved.id ? saved : b))
+          : [...prev, saved];
+        return saved.is_primary
+          ? merged.map((b) => ({ ...b, is_primary: b.id === saved.id }))
+          : merged;
+      });
+      setEditingBoat(null);
+      clearBoatForm();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not remove boat");
+      setError(e instanceof Error ? e.message : "Could not save boat");
+    } finally {
+      setSavingBoat(false);
     }
-  }, [userId, boats]);
+  }, [
+    userId,
+    editingBoat,
+    boatName,
+    boatMake,
+    boatModel,
+    boatType,
+    boatYear,
+    boatLength,
+    boatColor,
+    boatDescription,
+    boatPhotoUrl,
+    boats.length,
+    clearBoatForm,
+  ]);
+
+  const makeBoatPrimary = useCallback(
+    async (boat: Boat) => {
+      if (!userId || boat.is_primary) return;
+      setError(null);
+      const prevBoats = boats;
+      setBoats((prev) => prev.map((b) => ({ ...b, is_primary: b.id === boat.id })));
+      try {
+        await setPrimaryBoat(boat.id, userId);
+      } catch (e) {
+        setBoats(prevBoats);
+        setError(e instanceof Error ? e.message : "Could not set primary boat");
+      }
+    },
+    [userId, boats]
+  );
+
+  const removeBoat = useCallback(
+    (boat: Boat) => {
+      if (!userId) return;
+      Alert.alert("Delete boat", `Remove ${boat.name ?? boat.nickname} from your profile?`, [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            void (async () => {
+              setError(null);
+              try {
+                await deleteMyBoat(boat.id, userId);
+                setBoats((prev) => prev.filter((b) => b.id !== boat.id));
+                if (editingBoat !== "new" && editingBoat?.id === boat.id) {
+                  setEditingBoat(null);
+                  clearBoatForm();
+                }
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "Could not remove boat");
+              }
+            })();
+          },
+        },
+      ]);
+    },
+    [userId, editingBoat, clearBoatForm]
+  );
+
+  const toggleBadge = useCallback((id: string) => {
+    setSelectedBadges((prev) => (prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]));
+  }, []);
 
   const addGalleryPhoto = useCallback(async () => {
     if (!userId) return;
@@ -263,6 +429,7 @@ export default function EditProfileScreen() {
         purpose: "profile",
         entityType: "gallery",
         entityId: userId,
+        skipCompress: true,
       });
       const photo = await addProfilePhoto(userId, uploaded.url);
       setPhotos((prev) => [...prev, photo]);
@@ -340,27 +507,10 @@ export default function EditProfileScreen() {
         show_boat: showBoat,
         show_online: showOnline,
         allow_connection_requests: allowConnectionRequests,
+        show_in_discovery: showInDiscovery,
+        badges: mergeBadgeSelection(authProfile?.badges, selectedBadges),
       });
       await setMyInterests(userId, selectedInterests);
-      if (boatName.trim()) {
-        const existing = boats.find((b) => b.is_primary) ?? boats[0];
-        await upsertMyBoat({
-          id: existing?.id,
-          ownerId: userId,
-          nickname: boatName.trim(),
-          name: boatName.trim(),
-          manufacturer: boatMake.trim() || undefined,
-          model: boatModel.trim() || undefined,
-          boatType: boatType.trim() || undefined,
-          homeMarina: homeMarina.trim() || undefined,
-          year: boatYear.trim() ? parseInt(boatYear, 10) : undefined,
-          lengthFt: boatLength.trim() ? parseFloat(boatLength) : undefined,
-          primaryColor: boatColor.trim() || undefined,
-          description: boatDescription.trim() || undefined,
-          photoUrl: boatPhotoUrl ?? undefined,
-          isPrimary: true,
-        });
-      }
       await refreshProfile();
       router.back();
     } catch (e) {
@@ -383,16 +533,8 @@ export default function EditProfileScreen() {
     homeLakeId,
     identityTags,
     selectedInterests,
-    boatName,
-    boatMake,
-    boatModel,
-    boatType,
-    boatYear,
-    boatLength,
-    boatColor,
-    boatDescription,
-    boatPhotoUrl,
-    boats,
+    selectedBadges,
+    authProfile?.badges,
     avatarUrl,
     coverUrl,
     profileVisibility,
@@ -402,6 +544,7 @@ export default function EditProfileScreen() {
     showBoat,
     showOnline,
     allowConnectionRequests,
+    showInDiscovery,
     refreshProfile,
   ]);
 
@@ -576,7 +719,7 @@ export default function EditProfileScreen() {
 
         <Pressable style={styles.disclose} onPress={() => setShowWaterLife((v) => !v)}>
           <Text style={styles.discloseText}>
-            {showWaterLife ? "Hide" : "Add"} interests & boat{" "}
+            {showWaterLife ? "Hide" : "Add"} interests, boats & badges{" "}
             <Text style={styles.optional}>optional</Text>
           </Text>
           <Text style={styles.discloseChevron}>{showWaterLife ? "▴" : "▾"}</Text>
@@ -616,95 +759,177 @@ export default function EditProfileScreen() {
             </View>
 
             <View style={styles.boatHeaderRow}>
-              <Text style={styles.label}>Primary boat</Text>
-              {boatName.trim() ? (
-                <Pressable onPress={() => void removeBoat()} hitSlop={8}>
-                  <Text style={styles.removeBoat}>Remove boat</Text>
+              <Text style={styles.label}>My boats</Text>
+              {editingBoat === null ? (
+                <Pressable onPress={startAddBoat} hitSlop={8}>
+                  <Text style={styles.addBoatLink}>+ Add boat</Text>
                 </Pressable>
               ) : null}
             </View>
 
-            <View style={styles.boatPhotoRow}>
-              <Pressable
-                style={styles.boatPhotoTap}
-                onPress={() => void uploadBoatPhoto()}
-                disabled={!!uploadingKind}
-              >
-                {boatPhotoUrl ? (
-                  <Image source={{ uri: boatPhotoUrl }} style={styles.boatPhotoImg} />
+            {boats.length === 0 && editingBoat === null ? (
+              <Text style={styles.emptyHint}>
+                No boats yet — add one so lake friends know what you're rocking.
+              </Text>
+            ) : null}
+
+            {boats.map((b) => (
+              <View key={b.id} style={styles.boatRow}>
+                {b.photo_url ? (
+                  <Image source={{ uri: b.photo_url }} style={styles.boatRowImg} />
                 ) : (
-                  <View style={styles.boatPhotoEmpty}>
-                    <Text style={styles.photoHint}>
-                      {uploadingKind === "boat" ? "…" : "🚤 Add photo"}
-                    </Text>
+                  <View style={styles.boatRowImgEmpty}>
+                    <Text style={styles.photoHint}>🚤</Text>
                   </View>
                 )}
-              </Pressable>
-              <View style={{ flex: 1, gap: 6 }}>
-                <TextInput
-                  style={styles.input}
-                  value={boatName}
-                  onChangeText={setBoatName}
-                  placeholder="Boat name / nickname"
-                  placeholderTextColor={colors.muted}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={boatMake}
-                  onChangeText={setBoatMake}
-                  placeholder="Manufacturer"
-                  placeholderTextColor={colors.muted}
-                />
+                <View style={{ flex: 1 }}>
+                  <View style={styles.boatRowNameLine}>
+                    <Text style={styles.boatRowName} numberOfLines={1}>
+                      {b.name || b.nickname}
+                    </Text>
+                    {b.is_primary ? <Text style={styles.primaryTag}>PRIMARY</Text> : null}
+                  </View>
+                  <Text style={styles.boatRowSub} numberOfLines={1}>
+                    {[b.manufacturer ?? b.make, b.model, b.boat_type].filter(Boolean).join(" · ") ||
+                      "No details yet"}
+                  </Text>
+                  <View style={styles.boatRowActions}>
+                    {!b.is_primary ? (
+                      <Pressable onPress={() => void makeBoatPrimary(b)} hitSlop={6}>
+                        <Text style={styles.boatRowAction}>Set primary</Text>
+                      </Pressable>
+                    ) : null}
+                    <Pressable onPress={() => startEditBoat(b)} hitSlop={6}>
+                      <Text style={styles.boatRowAction}>Edit</Text>
+                    </Pressable>
+                    <Pressable onPress={() => removeBoat(b)} hitSlop={6}>
+                      <Text style={[styles.boatRowAction, styles.removeBoat]}>Delete</Text>
+                    </Pressable>
+                  </View>
+                </View>
               </View>
+            ))}
+
+            {editingBoat !== null ? (
+              <View style={styles.boatEditor}>
+                <View style={styles.boatPhotoRow}>
+                  <Pressable
+                    style={styles.boatPhotoTap}
+                    onPress={() => void uploadBoatPhoto()}
+                    disabled={!!uploadingKind}
+                  >
+                    {boatPhotoUrl ? (
+                      <Image source={{ uri: boatPhotoUrl }} style={styles.boatPhotoImg} />
+                    ) : (
+                      <View style={styles.boatPhotoEmpty}>
+                        <Text style={styles.photoHint}>
+                          {uploadingKind === "boat" ? "…" : "🚤 Add photo"}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <TextInput
+                      style={styles.input}
+                      value={boatName}
+                      onChangeText={setBoatName}
+                      placeholder="Boat name / nickname"
+                      placeholderTextColor={colors.muted}
+                    />
+                    <TextInput
+                      style={styles.input}
+                      value={boatMake}
+                      onChangeText={setBoatMake}
+                      placeholder="Manufacturer"
+                      placeholderTextColor={colors.muted}
+                    />
+                  </View>
+                </View>
+                <TextInput
+                  style={styles.input}
+                  value={boatModel}
+                  onChangeText={setBoatModel}
+                  placeholder="Model"
+                  placeholderTextColor={colors.muted}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={boatType}
+                  onChangeText={setBoatType}
+                  placeholder="Bowrider / Cruiser / Pontoon…"
+                  placeholderTextColor={colors.muted}
+                />
+                <View style={styles.boatRow3}>
+                  <TextInput
+                    style={[styles.input, styles.boatRow3Item]}
+                    value={boatYear}
+                    onChangeText={(t) => setBoatYear(t.replace(/[^0-9]/g, "").slice(0, 4))}
+                    placeholder="Year"
+                    keyboardType="number-pad"
+                    placeholderTextColor={colors.muted}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.boatRow3Item]}
+                    value={boatLength}
+                    onChangeText={(t) => setBoatLength(t.replace(/[^0-9.]/g, "").slice(0, 5))}
+                    placeholder="Length (ft)"
+                    keyboardType="decimal-pad"
+                    placeholderTextColor={colors.muted}
+                  />
+                  <TextInput
+                    style={[styles.input, styles.boatRow3Item]}
+                    value={boatColor}
+                    onChangeText={setBoatColor}
+                    placeholder="Color"
+                    placeholderTextColor={colors.muted}
+                  />
+                </View>
+                <TextInput
+                  style={[styles.input, styles.boatDescription]}
+                  value={boatDescription}
+                  onChangeText={setBoatDescription}
+                  placeholder="A line or two about your boat (optional)"
+                  placeholderTextColor={colors.muted}
+                  multiline
+                  maxLength={200}
+                />
+                <View style={styles.boatEditorActions}>
+                  <Pressable style={styles.boatEditorCancel} onPress={cancelBoatEditor}>
+                    <Text style={styles.boatEditorCancelText}>Cancel</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.boatEditorSave, !boatName.trim() && styles.boatEditorSaveDisabled]}
+                    onPress={() => void saveBoatForm()}
+                    disabled={savingBoat || !boatName.trim()}
+                  >
+                    <Text style={styles.boatEditorSaveText}>
+                      {savingBoat ? "Saving…" : editingBoat === "new" ? "Add boat" : "Save boat"}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            ) : null}
+
+            <Text style={[styles.label, { marginTop: 18 }]}>Boating badges</Text>
+            <Text style={styles.sectionSub}>
+              Pick what fits — shown on your profile next to any earned badges.
+            </Text>
+            <View style={styles.wrapChips}>
+              {BOATING_BADGES.map((b) => {
+                const on = selectedBadges.includes(b.id);
+                return (
+                  <Pressable
+                    key={b.id}
+                    style={[styles.chip, on && styles.chipOn]}
+                    onPress={() => toggleBadge(b.id)}
+                  >
+                    <Text style={[styles.chipText, on && styles.chipTextOn]}>
+                      {b.emoji} {b.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
-            <TextInput
-              style={styles.input}
-              value={boatModel}
-              onChangeText={setBoatModel}
-              placeholder="Model"
-              placeholderTextColor={colors.muted}
-            />
-            <TextInput
-              style={styles.input}
-              value={boatType}
-              onChangeText={setBoatType}
-              placeholder="Bowrider / Cruiser / Pontoon…"
-              placeholderTextColor={colors.muted}
-            />
-            <View style={styles.boatRow3}>
-              <TextInput
-                style={[styles.input, styles.boatRow3Item]}
-                value={boatYear}
-                onChangeText={(t) => setBoatYear(t.replace(/[^0-9]/g, "").slice(0, 4))}
-                placeholder="Year"
-                keyboardType="number-pad"
-                placeholderTextColor={colors.muted}
-              />
-              <TextInput
-                style={[styles.input, styles.boatRow3Item]}
-                value={boatLength}
-                onChangeText={(t) => setBoatLength(t.replace(/[^0-9.]/g, "").slice(0, 5))}
-                placeholder="Length (ft)"
-                keyboardType="decimal-pad"
-                placeholderTextColor={colors.muted}
-              />
-              <TextInput
-                style={[styles.input, styles.boatRow3Item]}
-                value={boatColor}
-                onChangeText={setBoatColor}
-                placeholder="Color"
-                placeholderTextColor={colors.muted}
-              />
-            </View>
-            <TextInput
-              style={[styles.input, styles.boatDescription]}
-              value={boatDescription}
-              onChangeText={setBoatDescription}
-              placeholder="A line or two about your boat (optional)"
-              placeholderTextColor={colors.muted}
-              multiline
-              maxLength={200}
-            />
           </View>
         ) : null}
 
@@ -762,6 +987,11 @@ export default function EditProfileScreen() {
             <SwitchRow label="Show my home marina" value={showMarina} onValueChange={setShowMarina} />
             <SwitchRow label="Show my boat" value={showBoat} onValueChange={setShowBoat} />
             <SwitchRow label="Show when I'm online" value={showOnline} onValueChange={setShowOnline} />
+            <SwitchRow
+              label="Show me in Discovery & search"
+              value={showInDiscovery}
+              onValueChange={setShowInDiscovery}
+            />
           </View>
         ) : null}
 
@@ -773,6 +1003,66 @@ export default function EditProfileScreen() {
         <Pressable style={styles.primary} onPress={() => void save()} disabled={saving}>
           <Text style={styles.primaryText}>{saving ? "Saving…" : "Save profile"}</Text>
         </Pressable>
+
+        <Pressable style={styles.disclose} onPress={() => setShowAccount((v) => !v)}>
+          <Text style={styles.discloseText}>{showAccount ? "Hide" : "Manage"} account</Text>
+          <Text style={styles.discloseChevron}>{showAccount ? "▴" : "▾"}</Text>
+        </Pressable>
+        {showAccount ? (
+          <View style={styles.discloseBody}>
+            <Text style={styles.label}>Blocked users</Text>
+            {blockedUsers.length === 0 ? (
+              <Text style={styles.hint}>You haven't blocked anyone.</Text>
+            ) : (
+              blockedUsers.map((b) => (
+                <View key={b.blocked_id} style={styles.blockedRow}>
+                  {b.profiles?.avatar_url ? (
+                    <Image source={{ uri: b.profiles.avatar_url }} style={styles.blockedAvatar} />
+                  ) : (
+                    <View style={[styles.blockedAvatar, styles.blockedAvatarEmpty]}>
+                      <Text style={styles.avatarEmptyText}>
+                        {(b.profiles?.display_name ?? "?").slice(0, 1).toUpperCase()}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={styles.blockedName} numberOfLines={1}>
+                    {b.profiles?.display_name ?? "RaftOff member"}
+                  </Text>
+                  <Pressable
+                    onPress={() => void unblock(b.blocked_id)}
+                    disabled={unblockingId === b.blocked_id}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.unblockText}>
+                      {unblockingId === b.blocked_id ? "…" : "Unblock"}
+                    </Text>
+                  </Pressable>
+                </View>
+              ))
+            )}
+
+            <Pressable
+              style={[styles.ghostBtn, { marginTop: 16 }]}
+              onPress={() => void signOut().then(() => router.replace("/(auth)/login" as never))}
+            >
+              <Text style={styles.ghostBtnText}>Sign out</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.dangerBtn, { marginTop: 10 }]}
+              disabled={deletingAccount}
+              onPress={confirmDeleteAccount}
+            >
+              <Text style={styles.dangerBtnText}>
+                {deletingAccount ? "Deleting…" : "Delete account"}
+              </Text>
+            </Pressable>
+            <Text style={styles.hint}>
+              Deleting your account hides your profile, clears your photos and status, and signs
+              you out.
+            </Text>
+          </View>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -945,6 +1235,80 @@ const styles = StyleSheet.create({
   boatRow3: { flexDirection: "row", gap: 8 },
   boatRow3Item: { flex: 1 },
   boatDescription: { minHeight: 56, textAlignVertical: "top" },
+  addBoatLink: { color: colors.action, fontSize: 12, fontWeight: "800" },
+  emptyHint: { color: colors.muted, fontSize: 12, lineHeight: 17, marginTop: 4 },
+  boatRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    backgroundColor: "rgba(18,32,51,0.6)",
+  },
+  boatRowImg: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  boatRowImgEmpty: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,159,67,0.1)",
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  boatRowNameLine: { flexDirection: "row", alignItems: "center", gap: 6 },
+  boatRowName: { color: colors.text, fontWeight: "800", fontSize: 14, flexShrink: 1 },
+  primaryTag: {
+    color: colors.action,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    borderWidth: 1,
+    borderColor: colors.action,
+    borderRadius: 999,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  boatRowSub: { color: colors.muted, fontSize: 12, marginTop: 2 },
+  boatRowActions: { flexDirection: "row", gap: 14, marginTop: 6 },
+  boatRowAction: { color: colors.action, fontSize: 12, fontWeight: "700" },
+  boatEditor: {
+    marginTop: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    backgroundColor: "rgba(18,32,51,0.4)",
+    gap: 2,
+  },
+  boatEditorActions: { flexDirection: "row", gap: 10, marginTop: 12 },
+  boatEditorCancel: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  boatEditorCancelText: { color: colors.muted, fontWeight: "700", fontSize: 13 },
+  boatEditorSave: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: colors.action,
+  },
+  boatEditorSaveDisabled: { opacity: 0.5 },
+  boatEditorSaveText: { color: "#fff", fontWeight: "800", fontSize: 13 },
   switchRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -954,4 +1318,33 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   switchLabel: { color: colors.text, fontSize: 13, fontWeight: "600", flex: 1, marginRight: 10 },
+  blockedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  blockedAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: colors.bgElevated },
+  blockedAvatarEmpty: { alignItems: "center", justifyContent: "center", backgroundColor: colors.action },
+  blockedName: { color: colors.text, fontWeight: "700", fontSize: 13, flex: 1 },
+  unblockText: { color: colors.action, fontWeight: "700", fontSize: 12 },
+  ghostBtn: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  ghostBtnText: { color: colors.text, fontWeight: "700" },
+  dangerBtn: {
+    backgroundColor: "rgba(255,92,92,0.12)",
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  dangerBtnText: { color: colors.danger, fontWeight: "800" },
 });

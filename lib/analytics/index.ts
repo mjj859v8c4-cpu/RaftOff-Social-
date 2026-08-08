@@ -63,6 +63,9 @@ export type AnalyticsEventName =
   | "share_intent"
   | "status_set"
   | "status_clear"
+  | "create_crew"
+  | "join_crew"
+  | "leave_crew"
   | "web_cta"
   | "audience_profile_update";
 

@@ -34,6 +34,13 @@
   to = "/about.html"
   status = 200
 
+# Profile deep links (§21) — /u/:username opens the web stub, which hands off
+# to the raftoff:// scheme when the app is installed.
+[[redirects]]
+  from = "/u/:username"
+  to = "/u.html?username=:username"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

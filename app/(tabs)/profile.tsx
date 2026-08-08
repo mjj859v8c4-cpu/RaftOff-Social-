@@ -40,9 +40,10 @@ import {
   profileCompletion,
   setMyStatus,
 } from "@/features/profiles/api";
-import type { Boat, Interest, ProfilePhoto, UserStatus } from "@/types/raftoff";
+import type { Boat, Interest, Post, ProfilePhoto, UserStatus } from "@/types/raftoff";
 import { ProfileBadges } from "@/components/profile/ProfileBadges";
 import { PhotoGallery } from "@/components/profile/PhotoGallery";
+import { listPostsByAuthor } from "@/features/posts/api";
 
 export default function ProfileScreen() {
   const activeMineId = useRaftOffStore((s) => s.activeMineId);
@@ -67,11 +68,13 @@ export default function ProfileScreen() {
   const [boats, setBoats] = useState<Boat[]>([]);
   const [interestLabels, setInterestLabels] = useState<string[]>([]);
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [counts, setCounts] = useState({ connections: 0, followers: 0, following: 0 });
   const [completion, setCompletion] = useState({ percent: 0, missing: [] as string[] });
   const [myStatus, setMyStatusRow] = useState<UserStatus | null>(null);
   const [statusDraft, setStatusDraft] = useState("");
   const [statusBusy, setStatusBusy] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
 
   useEffect(() => {
     track("profile_view");
@@ -88,21 +91,24 @@ export default function ProfileScreen() {
     if (!userId || !authProfile) return;
     void (async () => {
       try {
-        const [myBoats, myInterestIds, catalog, conn, fol, fing, myPhotos] = await Promise.all([
-          listBoatsForUser(userId),
-          listMyInterests(userId),
-          listInterests(),
-          countConnections(userId),
-          countFollowers(userId),
-          countFollowing(userId),
-          listProfilePhotos(userId).catch(() => [] as ProfilePhoto[]),
-        ]);
+        const [myBoats, myInterestIds, catalog, conn, fol, fing, myPhotos, myPosts] =
+          await Promise.all([
+            listBoatsForUser(userId),
+            listMyInterests(userId),
+            listInterests(),
+            countConnections(userId),
+            countFollowers(userId),
+            countFollowing(userId),
+            listProfilePhotos(userId).catch(() => [] as ProfilePhoto[]),
+            listPostsByAuthor(userId).catch(() => [] as Post[]),
+          ]);
         setBoats(myBoats);
         const labels = catalog
           .filter((i: Interest) => myInterestIds.includes(i.id))
           .map((i) => i.label);
         setInterestLabels(labels);
         setPhotos(myPhotos);
+        setPosts(myPosts);
         setCounts({ connections: conn, followers: fol, following: fing });
         setCompletion(
           profileCompletion(authProfile as never, {
@@ -186,7 +192,14 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.wrap} edges={["top"]}>
     <ScrollView contentContainerStyle={styles.content}>
-      <View style={styles.header}>
+      {authProfile?.cover_url ? (
+        <Image source={{ uri: authProfile.cover_url }} style={styles.cover} />
+      ) : (
+        <View style={styles.coverPlaceholder} />
+      )}
+
+      <View style={styles.body}>
+      <View style={styles.identity}>
         {authProfile?.avatar_url ? (
           <Image source={{ uri: authProfile.avatar_url }} style={styles.avatarImg} />
         ) : (
@@ -194,43 +207,24 @@ export default function ProfileScreen() {
             <Text style={styles.avatarText}>{initials}</Text>
           </View>
         )}
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>
-            {authProfile?.display_name ?? "You"}
-          </Text>
-          <Text style={styles.user}>
-            @{authProfile?.username ?? "boater"}
-            {authProfile?.home_city ? ` · ${authProfile.home_city}` : ""}
-          </Text>
-          <ProfileBadges badges={authProfile?.badges} />
-          <Text style={styles.lakeLine}>📍 {lakeName}</Text>
-          {authProfile?.bio ? <Text style={styles.bio}>{authProfile.bio}</Text> : null}
-          <View style={styles.chips}>
-            {(tags.length ? tags : ["Add interests"]).slice(0, 4).map((t) => (
-              <Text key={t} style={styles.chip}>
-                {t.replace(/-/g, " ")}
-              </Text>
-            ))}
-          </View>
-          <Pressable style={styles.shareLink} onPress={() => void shareProfile()} hitSlop={8}>
-            <Text style={styles.shareLinkText}>Share profile ↗</Text>
-          </Pressable>
+        <Text style={styles.name}>{authProfile?.display_name ?? "You"}</Text>
+        <Text style={styles.user}>
+          @{authProfile?.username ?? "boater"}
+          {authProfile?.home_city ? ` · ${authProfile.home_city}` : ""}
+        </Text>
+        <ProfileBadges badges={authProfile?.badges} />
+        <Text style={styles.lakeLine}>📍 {lakeName}</Text>
+        {authProfile?.bio ? <Text style={styles.bio}>{authProfile.bio}</Text> : null}
+        <View style={styles.chips}>
+          {(tags.length ? tags : ["Add interests"]).slice(0, 4).map((t) => (
+            <Text key={t} style={styles.chip}>
+              {t.replace(/-/g, " ")}
+            </Text>
+          ))}
         </View>
-      </View>
-
-      <View style={styles.statsRow}>
-        <Pressable style={styles.stat} onPress={() => router.push("/connections" as never)}>
-          <Text style={styles.statNum}>{counts.connections}</Text>
-          <Text style={styles.statLabel}>Connections</Text>
+        <Pressable style={styles.shareLink} onPress={() => void shareProfile()} hitSlop={8}>
+          <Text style={styles.shareLinkText}>Share profile ↗</Text>
         </Pressable>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{counts.followers}</Text>
-          <Text style={styles.statLabel}>Followers</Text>
-        </View>
-        <View style={styles.stat}>
-          <Text style={styles.statNum}>{counts.following}</Text>
-          <Text style={styles.statLabel}>Following</Text>
-        </View>
       </View>
 
       <View style={styles.actionRow}>
@@ -239,6 +233,31 @@ export default function ProfileScreen() {
         </Pressable>
         <Pressable style={styles.msgBtn} onPress={() => router.push("/messages" as never)}>
           <Text style={styles.msgBtnText}>Messages</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.statsRow}>
+        <Pressable style={styles.stat} onPress={() => router.push("/connections" as never)}>
+          <Text style={styles.statNum}>{counts.connections}</Text>
+          <Text style={styles.statLabel}>Connections</Text>
+        </Pressable>
+        <Pressable
+          style={styles.stat}
+          onPress={() =>
+            router.push({ pathname: "/connections", params: { tab: "followers" } } as never)
+          }
+        >
+          <Text style={styles.statNum}>{counts.followers}</Text>
+          <Text style={styles.statLabel}>Followers</Text>
+        </Pressable>
+        <Pressable
+          style={styles.stat}
+          onPress={() =>
+            router.push({ pathname: "/connections", params: { tab: "following" } } as never)
+          }
+        >
+          <Text style={styles.statNum}>{counts.following}</Text>
+          <Text style={styles.statLabel}>Following</Text>
         </Pressable>
       </View>
 
@@ -280,12 +299,47 @@ export default function ProfileScreen() {
         </Pressable>
       )}
 
+      {interestLabels.length ? (
+        <View style={styles.card}>
+          <Text style={styles.kicker}>Interests</Text>
+          <View style={styles.chips}>
+            {interestLabels.map((label) => (
+              <Text key={label} style={styles.chip}>
+                {label}
+              </Text>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
       {photos.length ? (
         <>
           <Text style={styles.section}>Gallery</Text>
           <PhotoGallery photos={photos} />
         </>
       ) : null}
+
+      <Text style={styles.section}>Posts</Text>
+      {posts.length ? (
+        <View style={styles.postsGrid}>
+          {posts.slice(0, 9).map((p) => {
+            const thumb = p.photo_urls?.[0] ?? p.photo_url;
+            return thumb ? (
+              <Image key={p.id} source={{ uri: thumb }} style={styles.postTile} />
+            ) : (
+              <View key={p.id} style={styles.postTileText}>
+                <Text numberOfLines={4} style={styles.postTileTextInner}>
+                  {p.text}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      ) : (
+        <Text style={styles.hint}>
+          Your posts will show up here once you share something on the map or feed.
+        </Text>
+      )}
 
       {active ? (
         <View style={styles.active}>
@@ -345,100 +399,6 @@ export default function ProfileScreen() {
         </>
       )}
 
-      <Text style={styles.section}>Your scene</Text>
-      <Text style={styles.hint}>Helps RaftOff match the vibe — and powers sponsor insights.</Text>
-      <Text style={styles.label}>I have a boat</Text>
-      <View style={styles.rowBtns}>
-        {[true, false].map((v) => (
-          <Pressable
-            key={String(v)}
-            style={[styles.pill, profile.hasBoat === v && styles.pillOn]}
-            onPress={() => patchProfile({ hasBoat: v })}
-          >
-            <Text style={[styles.pillText, profile.hasBoat === v && styles.pillTextOn]}>
-              {v ? "Boat owner" : "Guest / crew"}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.label}>Age range</Text>
-      <View style={styles.rowBtns}>
-        {(
-          [
-            ["18_24", "18–24"],
-            ["25_34", "25–34"],
-            ["35_44", "35–44"],
-            ["45_plus", "45+"],
-          ] as const
-        ).map(([id, label]) => (
-          <Pressable
-            key={id}
-            style={[styles.pill, profile.ageBucket === id && styles.pillOn]}
-            onPress={() => patchProfile({ ageBucket: id })}
-          >
-            <Text style={[styles.pillText, profile.ageBucket === id && styles.pillTextOn]}>
-              {label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      <Text style={styles.label}>How you show up</Text>
-      <View style={styles.rowBtns}>
-        {(
-          [
-            ["female", "Woman"],
-            ["male", "Man"],
-            ["nonbinary", "Non-binary"],
-            ["unspecified", "Skip"],
-          ] as const
-        ).map(([id, label]) => (
-          <Pressable
-            key={id}
-            style={[styles.pill, profile.genderPresentation === id && styles.pillOn]}
-            onPress={() => patchProfile({ genderPresentation: id })}
-          >
-            <Text
-              style={[styles.pillText, profile.genderPresentation === id && styles.pillTextOn]}
-            >
-              {label}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {profile.hasBoat ? (
-        <>
-          <Text style={styles.label}>Boat size</Text>
-          <View style={styles.rowBtns}>
-            {(
-              [
-                ["under_20", "<20'"],
-                ["20_30", "20–30'"],
-                ["30_40", "30–40'"],
-                ["40_plus", "40'+"],
-              ] as const
-            ).map(([id, label]) => (
-              <Pressable
-                key={id}
-                style={[styles.pill, profile.boatLengthFtBucket === id && styles.pillOn]}
-                onPress={() => patchProfile({ boatLengthFtBucket: id })}
-              >
-                <Text
-                  style={[
-                    styles.pillText,
-                    profile.boatLengthFtBucket === id && styles.pillTextOn,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </>
-      ) : null}
-
       <Text style={styles.section}>Privacy defaults</Text>
       <Row label="Public map precision" value="Place / zone" />
       <Row label="Default audience" value="Public" />
@@ -465,62 +425,171 @@ export default function ProfileScreen() {
         <Text style={styles.ghostText}>Sign out</Text>
       </Pressable>
 
-      <Text style={styles.section}>Insights & sponsors</Text>
-      <Text style={styles.hint}>
-        We capture place-level activity (not your exact GPS) to sell lake insights to marinas and
-        brands. Toggle anytime.
-      </Text>
+      {/* Analytics / commercial insights live below the social identity content, collapsed by default. */}
       <Pressable
-        style={[styles.pill, commercialOn && styles.pillOn]}
-        onPress={async () => {
-          const next = !commercialOn;
-          setCommercialOn(next);
-          await setConsent({ commercialInsights: next });
-          await patchProfile({ commercialOk: next });
-        }}
+        style={styles.analyticsToggle}
+        onPress={() => setAnalyticsOpen((v) => !v)}
+        hitSlop={8}
       >
-        <Text style={[styles.pillText, commercialOn && styles.pillTextOn]}>
-          Commercial insights: {commercialOn ? "On" : "Off"}
+        <Text style={styles.section}>
+          {analyticsOpen ? "▾" : "▸"} Analytics & sponsor insights
         </Text>
       </Pressable>
-      <Row label="Queued events" value={String(queueSize)} />
-      <Pressable
-        style={styles.ghost}
-        onPress={async () => {
-          const json = await exportCommercialInsightsJson();
-          setExportPreview(json.slice(0, 1200));
-          setQueueSize(await getQueueSize());
-        }}
-      >
-        <Text style={styles.ghostText}>Preview sellable insights package</Text>
-      </Pressable>
-      {exportPreview ? (
-        <Text style={styles.export} selectable>
-          {exportPreview}
-        </Text>
+
+      {analyticsOpen ? (
+        <>
+          <Text style={styles.hint}>Helps RaftOff match the vibe — and powers sponsor insights.</Text>
+          <Text style={styles.label}>I have a boat</Text>
+          <View style={styles.rowBtns}>
+            {[true, false].map((v) => (
+              <Pressable
+                key={String(v)}
+                style={[styles.pill, profile.hasBoat === v && styles.pillOn]}
+                onPress={() => patchProfile({ hasBoat: v })}
+              >
+                <Text style={[styles.pillText, profile.hasBoat === v && styles.pillTextOn]}>
+                  {v ? "Boat owner" : "Guest / crew"}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.label}>Age range</Text>
+          <View style={styles.rowBtns}>
+            {(
+              [
+                ["18_24", "18–24"],
+                ["25_34", "25–34"],
+                ["35_44", "35–44"],
+                ["45_plus", "45+"],
+              ] as const
+            ).map(([id, label]) => (
+              <Pressable
+                key={id}
+                style={[styles.pill, profile.ageBucket === id && styles.pillOn]}
+                onPress={() => patchProfile({ ageBucket: id })}
+              >
+                <Text style={[styles.pillText, profile.ageBucket === id && styles.pillTextOn]}>
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.label}>How you show up</Text>
+          <View style={styles.rowBtns}>
+            {(
+              [
+                ["female", "Woman"],
+                ["male", "Man"],
+                ["nonbinary", "Non-binary"],
+                ["unspecified", "Skip"],
+              ] as const
+            ).map(([id, label]) => (
+              <Pressable
+                key={id}
+                style={[styles.pill, profile.genderPresentation === id && styles.pillOn]}
+                onPress={() => patchProfile({ genderPresentation: id })}
+              >
+                <Text
+                  style={[styles.pillText, profile.genderPresentation === id && styles.pillTextOn]}
+                >
+                  {label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {profile.hasBoat ? (
+            <>
+              <Text style={styles.label}>Boat size</Text>
+              <View style={styles.rowBtns}>
+                {(
+                  [
+                    ["under_20", "<20'"],
+                    ["20_30", "20–30'"],
+                    ["30_40", "30–40'"],
+                    ["40_plus", "40'+"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <Pressable
+                    key={id}
+                    style={[styles.pill, profile.boatLengthFtBucket === id && styles.pillOn]}
+                    onPress={() => patchProfile({ boatLengthFtBucket: id })}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        profile.boatLengthFtBucket === id && styles.pillTextOn,
+                      ]}
+                    >
+                      {label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          ) : null}
+
+          <Text style={styles.label}>Commercial insights</Text>
+          <Text style={styles.hint}>
+            We capture place-level activity (not your exact GPS) to sell lake insights to marinas
+            and brands. Toggle anytime.
+          </Text>
+          <Pressable
+            style={[styles.pill, commercialOn && styles.pillOn]}
+            onPress={async () => {
+              const next = !commercialOn;
+              setCommercialOn(next);
+              await setConsent({ commercialInsights: next });
+              await patchProfile({ commercialOk: next });
+            }}
+          >
+            <Text style={[styles.pillText, commercialOn && styles.pillTextOn]}>
+              Commercial insights: {commercialOn ? "On" : "Off"}
+            </Text>
+          </Pressable>
+          <Row label="Queued events" value={String(queueSize)} />
+          <Pressable
+            style={styles.ghost}
+            onPress={async () => {
+              const json = await exportCommercialInsightsJson();
+              setExportPreview(json.slice(0, 1200));
+              setQueueSize(await getQueueSize());
+            }}
+          >
+            <Text style={styles.ghostText}>Preview sellable insights package</Text>
+          </Pressable>
+          {exportPreview ? (
+            <Text style={styles.export} selectable>
+              {exportPreview}
+            </Text>
+          ) : null}
+
+          <Text style={styles.label}>Backend status</Text>
+          <Row label="Supabase" value={isSupabaseConfigured ? "Configured" : "Local demo mode"} />
+          <Row label="Mapbox" value={isMapboxConfigured ? "Configured" : "Schematic fallback"} />
+
+          <Text style={styles.label}>Your recent check-ins</Text>
+          {mine.length === 0 ? (
+            <Text style={styles.meta}>No check-ins yet</Text>
+          ) : (
+            mine.slice(0, 8).map((c) => (
+              <Row
+                key={c.id}
+                label={`${c.location?.name ?? "Lake"} · ${c.vibe}`}
+                value={c.status === "active" ? "Active" : c.status}
+              />
+            ))
+          )}
+        </>
       ) : null}
-
-      <Text style={styles.section}>Backend status</Text>
-      <Row label="Supabase" value={isSupabaseConfigured ? "Configured" : "Local demo mode"} />
-      <Row label="Mapbox" value={isMapboxConfigured ? "Configured" : "Schematic fallback"} />
-
-      <Text style={styles.section}>Your recent check-ins</Text>
-      {mine.length === 0 ? (
-        <Text style={styles.meta}>No check-ins yet</Text>
-      ) : (
-        mine.slice(0, 8).map((c) => (
-          <Row
-            key={c.id}
-            label={`${c.location?.name ?? "Lake"} · ${c.vibe}`}
-            value={c.status === "active" ? "Active" : c.status}
-          />
-        ))
-      )}
 
       <Text style={styles.safety}>
         RaftOff does not replace official charts, navigation equipment, weather services, or Coast
         Guard guidance. Exact fishing GPS is never sold.
       </Text>
+      </View>
     </ScrollView>
     </SafeAreaView>
   );
@@ -537,18 +606,32 @@ function Row({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   wrap: { flex: 1, backgroundColor: colors.bg },
-  content: { padding: spacing.lg, paddingBottom: 48 },
-  header: { flexDirection: "row", gap: 12, marginBottom: 16 },
+  content: { paddingBottom: 48 },
+  body: { paddingHorizontal: spacing.lg },
+  cover: { width: "100%", height: 130, backgroundColor: colors.bgElevated },
+  coverPlaceholder: { width: "100%", height: 110, backgroundColor: "rgba(46,242,200,0.08)" },
+  identity: { marginTop: -34, marginBottom: 14 },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     backgroundColor: colors.action,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 3,
+    borderColor: colors.bg,
+    marginBottom: 10,
   },
-  avatarText: { color: "#fff", fontWeight: "800" },
-  avatarImg: { width: 56, height: 56, borderRadius: 28, backgroundColor: colors.bgElevated },
+  avatarText: { color: "#fff", fontWeight: "800", fontSize: 20 },
+  avatarImg: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 3,
+    borderColor: colors.bg,
+    marginBottom: 10,
+  },
   name: { color: colors.text, fontSize: 22, fontWeight: "800" },
   user: { color: colors.muted, marginBottom: 4 },
   lakeLine: { color: colors.active, fontSize: 13, fontWeight: "600", marginBottom: 6 },
@@ -556,10 +639,11 @@ const styles = StyleSheet.create({
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   shareLink: { marginTop: 8, alignSelf: "flex-start" },
   shareLinkText: { color: colors.active, fontSize: 12, fontWeight: "700" },
+  actionRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginBottom: 12,
+    marginBottom: 16,
     paddingVertical: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
@@ -568,7 +652,6 @@ const styles = StyleSheet.create({
   stat: { alignItems: "center" },
   statNum: { color: colors.text, fontWeight: "800", fontSize: 18 },
   statLabel: { color: colors.muted, fontSize: 11, marginTop: 2 },
-  actionRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   editBtn: {
     flex: 1,
     backgroundColor: colors.action,
@@ -620,6 +703,42 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   boatName: { color: colors.text, fontWeight: "800", fontSize: 16 },
+  card: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    gap: 6,
+  },
+  kicker: {
+    color: colors.food,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  postsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
+  postTile: {
+    width: "31%",
+    aspectRatio: 1,
+    borderRadius: 10,
+    backgroundColor: colors.bgElevated,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  postTileText: {
+    width: "31%",
+    aspectRatio: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.bgSoft,
+    padding: 8,
+    justifyContent: "center",
+  },
+  postTileTextInner: { color: colors.muted, fontSize: 11, lineHeight: 14 },
+  analyticsToggle: { marginTop: 4 },
   chip: {
     color: colors.active,
     fontSize: 11,

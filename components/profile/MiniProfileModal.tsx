@@ -11,6 +11,7 @@ import {
 } from "@/features/profiles/api";
 import type { Boat, ConnectionStatus, Profile, UserStatus } from "@/types/raftoff";
 import { ProfileBadges } from "@/components/profile/ProfileBadges";
+import { describeDmError } from "@/features/messages/errors";
 
 type Props = {
   visible: boolean;
@@ -141,12 +142,13 @@ export function MiniProfileModal({ visible, profileId, onClose }: Props) {
                       disabled={busy}
                       onPress={() => {
                         setBusy(true);
+                        setError(null);
                         void getOrCreateDm(profile.id)
                           .then((id) => {
                             close();
                             router.push(`/messages/${id}` as never);
                           })
-                          .catch(() => setError("Could not open chat"))
+                          .catch((e) => setError(describeDmError(e)))
                           .finally(() => setBusy(false));
                       }}
                     >

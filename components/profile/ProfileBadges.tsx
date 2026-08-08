@@ -1,6 +1,7 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { colors, spacing } from "@/lib/theme";
+import { BOATING_BADGES } from "@/lib/profile/badges";
 
 /** Known profile badge ids → short labels shown on profiles */
 const BADGE_LABELS: Record<string, string> = {
@@ -8,6 +9,7 @@ const BADGE_LABELS: Record<string, string> = {
   "co-founder": "Co-founder",
   founder: "Founder",
   "founding-member": "Founding",
+  ...Object.fromEntries(BOATING_BADGES.map((b) => [b.id, `${b.emoji} ${b.label}`])),
 };
 
 const BADGE_ORDER = ["creator", "co-founder", "founder", "founding-member"];

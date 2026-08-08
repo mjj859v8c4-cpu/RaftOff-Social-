@@ -1,7 +1,10 @@
 /**
- * Notifications — connection requests/accepts, new followers, likes, comments.
- * Rows are written by RPCs (server side, e.g. accept_connection_request,
- * follow_profile) or by the acting user directly (see notifications RLS in
+ * Notifications — connection requests/accepts, new followers, post likes,
+ * comments, and nearby check-ins from connections. Rows are written by RPCs
+ * (server side, e.g. accept_connection_request, follow_profile), by triggers
+ * (post likes/comments, checkin_nearby — see
+ * supabase/migrations/20260808230000_notifications_checkin_nearby.sql), or by
+ * the acting user directly (see notifications RLS in
  * supabase/migrations/20260807240000_discover_social.sql).
  */
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";

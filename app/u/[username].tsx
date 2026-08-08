@@ -21,6 +21,7 @@ import {
   getConnectionStatus,
   getOrCreateDm,
   getProfileByUsername,
+  getPublicActiveCheckIn,
   isFollowing as checkIsFollowing,
   listBoatsForUser,
   listMyInterests,
@@ -31,12 +32,23 @@ import {
 } from "@/features/profiles/api";
 import { useAuthStore } from "@/features/auth/store";
 import { useRaftOffStore } from "@/features/map/store";
-import type { Boat, ConnectionStatus, Profile, ProfilePhoto, UserStatus } from "@/types/raftoff";
+import type { Boat, ConnectionStatus, Post, Profile, ProfilePhoto, UserStatus } from "@/types/raftoff";
 import { ReportBlockModal } from "@/components/moderation/ReportBlockModal";
 import { ProfileBadges } from "@/components/profile/ProfileBadges";
 import { PhotoGallery } from "@/components/profile/PhotoGallery";
+import { ProfileQrModal } from "@/components/profile/ProfileQrModal";
+import { RecentPosts } from "@/components/profile/RecentPosts";
+import { listPostsByAuthor } from "@/features/posts/api";
+import { describeDmError } from "@/features/messages/errors";
 import { track } from "@/lib/analytics";
 import { SafetyBanner } from "@/components/safety/SafetyBanner";
+
+function memberSince(iso?: string | null): string | null {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+}
 
 export default function PublicProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -46,7 +58,13 @@ export default function PublicProfileScreen() {
   const [boat, setBoat] = useState<Boat | null>(null);
   const [interests, setInterests] = useState<string[]>([]);
   const [photos, setPhotos] = useState<ProfilePhoto[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [activeStatus, setActiveStatus] = useState<UserStatus | null>(null);
+  const [onWater, setOnWater] = useState<{
+    location_id: string;
+    location_name: string | null;
+    vibe: string | null;
+  } | null>(null);
   const [counts, setCounts] = useState({ connections: 0, followers: 0, following: 0 });
   const [loading, setLoading] = useState(true);
   const [connStatus, setConnStatus] = useState<ConnectionStatus>("none");
@@ -55,6 +73,7 @@ export default function PublicProfileScreen() {
   const [following, setFollowing] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
   const [modOpen, setModOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -79,6 +98,8 @@ export default function PublicProfileScreen() {
           iFollow,
           galleryPhotos,
           personStatus,
+          activeCheckIn,
+          recentPosts,
         ] = await Promise.all([
           listBoatsForUser(p.id),
           listMyInterests(p.id),
@@ -90,17 +111,21 @@ export default function PublicProfileScreen() {
           me && me !== p.id ? checkIsFollowing(me, p.id).catch(() => false) : Promise.resolve(false),
           listProfilePhotos(p.id).catch(() => [] as ProfilePhoto[]),
           getActiveStatus(p.id).catch(() => null),
+          getPublicActiveCheckIn(p.id).catch(() => null),
+          listPostsByAuthor(p.id).catch(() => [] as Post[]),
         ]);
         setBoat(boats.find((b) => b.is_primary) ?? boats[0] ?? null);
         setInterests(
           catalog.filter((i) => interestIds.includes(i.id)).map((i) => i.label)
         );
         setPhotos(galleryPhotos);
+        setPosts(recentPosts);
         setCounts({ connections: conn, followers: fol, following: followingCount });
         setConnStatus(connectionStatus.status);
         setRequestId("requestId" in connectionStatus ? connectionStatus.requestId : undefined);
         setFollowing(iFollow);
         setActiveStatus(personStatus);
+        setOnWater(activeCheckIn);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -128,6 +153,18 @@ export default function PublicProfileScreen() {
   const lakeName = lakes.find((l) => l.id === profile.home_lake_id)?.name ?? "Michigan lakes";
   const isSelf = me === profile.id;
 
+  const openSocialList = (tab: "connections" | "followers" | "following") => {
+    router.push({
+      pathname: "/connections",
+      params: {
+        tab,
+        userId: profile.id,
+        username: profile.username,
+        displayName: profile.display_name,
+      },
+    } as never);
+  };
+
   return (
     <ScrollView style={styles.wrap} contentContainerStyle={styles.content}>
       {profile.cover_url ? (
@@ -152,6 +189,18 @@ export default function PublicProfileScreen() {
         <Text style={styles.handle}>@{profile.username}</Text>
         <ProfileBadges badges={profile.badges} />
         <Text style={styles.lake}>📍 {lakeName}</Text>
+        {onWater ? (
+          <Pressable
+            style={styles.onWaterPill}
+            onPress={() => router.push(`/locations/${onWater.location_id}` as never)}
+          >
+            <View style={styles.onWaterDot} />
+            <Text style={styles.onWaterPillText}>
+              On the water{onWater.location_name ? ` · ${onWater.location_name}` : ""}
+              {onWater.vibe ? ` · ${onWater.vibe}` : ""}
+            </Text>
+          </Pressable>
+        ) : null}
         {activeStatus ? (
           <View style={styles.statusPill}>
             <Text style={styles.statusPillText}>💬 {activeStatus.body}</Text>
@@ -163,9 +212,6 @@ export default function PublicProfileScreen() {
             <SafetyBanner variant="profile" />
           </View>
         ) : null}
-        <Text style={styles.stats}>
-          {counts.connections} Connections · {counts.followers} Followers · {counts.following} Following
-        </Text>
       </View>
 
       {!isSelf && me ? (
@@ -195,9 +241,10 @@ export default function PublicProfileScreen() {
               disabled={actionBusy}
               onPress={() => {
                 setActionBusy(true);
+                setError(null);
                 void getOrCreateDm(profile.id)
                   .then((id) => router.push(`/messages/${id}` as never))
-                  .catch(() => setError("Could not open chat"))
+                  .catch((e) => setError(describeDmError(e)))
                   .finally(() => setActionBusy(false));
               }}
             >
@@ -254,6 +301,30 @@ export default function PublicProfileScreen() {
           </Pressable>
         </View>
       ) : null}
+
+      <View style={styles.statsWrap}>
+        <View style={styles.statsRow}>
+          <Pressable style={styles.statPress} onPress={() => openSocialList("connections")}>
+            <Text style={styles.statsText}>
+              <Text style={styles.statsNum}>{counts.connections}</Text> Connections
+            </Text>
+          </Pressable>
+          <Pressable style={styles.statPress} onPress={() => openSocialList("followers")}>
+            <Text style={styles.statsText}>
+              <Text style={styles.statsNum}>{counts.followers}</Text> Followers
+            </Text>
+          </Pressable>
+          <Pressable style={styles.statPress} onPress={() => openSocialList("following")}>
+            <Text style={styles.statsText}>
+              <Text style={styles.statsNum}>{counts.following}</Text> Following
+            </Text>
+          </Pressable>
+        </View>
+        {memberSince(profile.created_at) ? (
+          <Text style={styles.memberSince}>Member since {memberSince(profile.created_at)}</Text>
+        ) : null}
+      </View>
+
       {error && profile ? <Text style={styles.inlineError}>{error}</Text> : null}
 
       {boat && profile.show_boat !== false ? (
@@ -299,16 +370,30 @@ export default function PublicProfileScreen() {
         </View>
       ) : null}
 
-      <Pressable
-        style={styles.shareRow}
-        onPress={() => {
-          const url = `https://raftoffsocial.com/u/${profile.username}`;
-          track("share_intent", { target: "public_profile" });
-          void Share.share({ message: `Check out ${profile.display_name} on RaftOff: ${url}`, url });
-        }}
-      >
-        <Text style={styles.share}>Share profile · raftoffsocial.com/u/{profile.username} ↗</Text>
-      </Pressable>
+      <View style={styles.card}>
+        <Text style={styles.kicker}>Recent posts</Text>
+        {posts.length ? (
+          <RecentPosts posts={posts} />
+        ) : (
+          <Text style={styles.meta}>No posts yet — check back after they drop anchor or share.</Text>
+        )}
+      </View>
+
+      <View style={styles.shareActions}>
+        <Pressable
+          style={styles.shareRow}
+          onPress={() => {
+            const url = `https://raftoffsocial.com/u/${profile.username}`;
+            track("share_intent", { target: "public_profile" });
+            void Share.share({ message: `Check out ${profile.display_name} on RaftOff: ${url}`, url });
+          }}
+        >
+          <Text style={styles.share}>Share profile · raftoffsocial.com/u/{profile.username} ↗</Text>
+        </Pressable>
+        <Pressable style={styles.qrRow} onPress={() => setQrOpen(true)}>
+          <Text style={styles.share}>Show QR code ▦</Text>
+        </Pressable>
+      </View>
 
       <ReportBlockModal
         visible={modOpen}
@@ -316,6 +401,12 @@ export default function PublicProfileScreen() {
         targetUserId={profile.id}
         targetType="user"
         targetId={profile.id}
+      />
+      <ProfileQrModal
+        visible={qrOpen}
+        username={profile.username}
+        displayName={profile.display_name}
+        onClose={() => setQrOpen(false)}
       />
     </ScrollView>
   );
@@ -361,9 +452,41 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   statusPillText: { color: colors.text, fontSize: 13, fontWeight: "600" },
+  onWaterPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: "rgba(110,200,255,0.4)",
+    backgroundColor: "rgba(110,200,255,0.12)",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  onWaterDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: colors.chill,
+  },
+  onWaterPillText: { color: colors.chill, fontSize: 13, fontWeight: "700" },
   bio: { color: colors.muted, marginTop: 10, lineHeight: 20 },
   safety: { marginTop: 10 },
-  stats: { color: colors.text, marginTop: 12, fontWeight: "700" },
+  statsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  statPress: { paddingVertical: 2 },
+  statsText: { color: colors.muted, fontSize: 13, fontWeight: "600" },
+  statsNum: { color: colors.text, fontWeight: "800" },
+  memberSince: { color: colors.muted, fontSize: 12, marginTop: 8 },
   actions: { flexDirection: "row", gap: 10, paddingHorizontal: spacing.lg, marginBottom: 12 },
   connect: {
     flex: 1,
@@ -425,6 +548,14 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     overflow: "hidden",
   },
-  shareRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.lg },
+  shareActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  shareRow: { paddingVertical: spacing.xs },
+  qrRow: { paddingVertical: spacing.xs },
   share: { color: colors.active, fontSize: 12, fontWeight: "700" },
 });

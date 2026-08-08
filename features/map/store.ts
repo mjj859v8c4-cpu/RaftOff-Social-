@@ -44,7 +44,7 @@ type RaftOffState = {
     description?: string;
     coverPhotoUrl?: string;
   }) => Promise<void>;
-  rsvpEvent: (eventId: string, going: boolean) => Promise<void>;
+  rsvpEvent: (eventId: string, status: "going" | "interested" | null) => Promise<void>;
   locationsForActiveLake: () => Location[];
   diningForActiveLake: () => Location[];
   getSummary: () => LakeSummary;
@@ -191,7 +191,7 @@ export const useRaftOffStore = create<RaftOffState>((set, get) => ({
       const [locations, posts, events, checkIns, summary] = await Promise.all([
         api.listLocations({ lakeId: id }),
         api.listLakeFeed(id),
-        api.listEvents(id),
+        api.listEvents(id, useAuthStore.getState().session?.user?.id),
         api.listActiveCheckIns(id),
         api.getLakeSummary(id),
       ]);
@@ -335,20 +335,28 @@ export const useRaftOffStore = create<RaftOffState>((set, get) => ({
     await get().refreshLake(lakeId);
   },
 
-  rsvpEvent: async (eventId, going) => {
+  rsvpEvent: async (eventId, status) => {
     const userId = useAuthStore.getState().session?.user?.id;
     if (!userId) throw new Error("Sign in required");
-    await api.rsvpEvent(eventId, userId, going);
+    await api.rsvpEvent(eventId, userId, status);
     set({
-      events: get().events.map((e) =>
-        e.id === eventId
-          ? {
-              ...e,
-              going,
-              rsvp_count: Math.max(0, (e.rsvp_count ?? 0) + (going ? 1 : -1)),
-            }
-          : e
-      ),
+      events: get().events.map((e) => {
+        if (e.id !== eventId) return e;
+        const wasGoing = !!e.going;
+        const wasInterested = !!e.interested;
+        const nowGoing = status === "going";
+        const nowInterested = status === "interested";
+        return {
+          ...e,
+          going: nowGoing,
+          interested: nowInterested,
+          rsvp_count: Math.max(0, (e.rsvp_count ?? 0) + (nowGoing ? 1 : 0) - (wasGoing ? 1 : 0)),
+          interested_count: Math.max(
+            0,
+            (e.interested_count ?? 0) + (nowInterested ? 1 : 0) - (wasInterested ? 1 : 0)
+          ),
+        };
+      }),
     });
   },
 }));

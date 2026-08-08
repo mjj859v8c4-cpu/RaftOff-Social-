@@ -145,8 +145,9 @@ export type NotificationType =
   | "connection_request"
   | "connection_accepted"
   | "new_follower"
-  | "like"
-  | "comment"
+  | "post_like"
+  | "post_comment"
+  | "checkin_nearby"
   | string;
 
 export interface AppNotification {
@@ -260,8 +261,24 @@ export interface LakeEvent {
   visibility: string;
   status: string;
   rsvp_count?: number;
+  interested_count?: number;
   going?: boolean;
+  interested?: boolean;
   location?: Location;
+}
+
+export interface Crew {
+  id: string;
+  lake_id?: string | null;
+  slug: string;
+  name: string;
+  description?: string | null;
+  cover_url?: string | null;
+  visibility: string;
+  created_by?: string | null;
+  created_at?: string;
+  member_count?: number;
+  joined?: boolean;
 }
 
 export interface LakeSummary {

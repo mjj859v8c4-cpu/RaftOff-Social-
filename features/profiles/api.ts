@@ -141,6 +141,56 @@ export async function ensureMyProfile(input?: {
   return data as Profile;
 }
 
+async function getViewerId(): Promise<string | null> {
+  const { data } = await client().auth.getUser();
+  return data.user?.id ?? null;
+}
+
+async function isConnectedPair(aId: string, bId: string): Promise<boolean> {
+  const a = aId < bId ? aId : bId;
+  const b = aId < bId ? bId : aId;
+  const { data, error } = await client()
+    .from("connections")
+    .select("profile_a")
+    .eq("profile_a", a)
+    .eq("profile_b", b)
+    .maybeSingle();
+  if (error) throw new ApiError(error.message, error.code);
+  return !!data;
+}
+
+async function isModerator(viewerId: string): Promise<boolean> {
+  const { data } = await client()
+    .from("profiles")
+    .select("role")
+    .eq("id", viewerId)
+    .maybeSingle();
+  return data?.role === "admin" || data?.role === "moderator";
+}
+
+/** Enforces `profile_visibility` ("everyone" | "members" | "connections") for a viewer. */
+async function canViewProfile(profile: Profile, viewerId: string | null): Promise<boolean> {
+  const visibility = profile.profile_visibility ?? "everyone";
+  if (visibility === "everyone") return true;
+  if (!viewerId) return false;
+  if (viewerId === profile.id) return true;
+  if (visibility === "members") return true;
+  if (visibility === "connections") {
+    if (await isConnectedPair(viewerId, profile.id)) return true;
+    return isModerator(viewerId);
+  }
+  return true;
+}
+
+function privacyError(profile: Profile): ApiError {
+  return new ApiError(
+    profile.profile_visibility === "connections"
+      ? "This profile is only visible to connections."
+      : "This profile is only visible to signed-in RaftOff members.",
+    "private_profile"
+  );
+}
+
 export async function getFullProfile(userId: string): Promise<Profile | null> {
   const { data, error } = await client()
     .from("profiles")
@@ -148,7 +198,11 @@ export async function getFullProfile(userId: string): Promise<Profile | null> {
     .eq("id", userId)
     .maybeSingle();
   if (error) throw new ApiError(error.message, error.code);
-  return (data as Profile) ?? null;
+  if (!data) return null;
+  const profile = data as Profile;
+  const viewerId = await getViewerId();
+  if (!(await canViewProfile(profile, viewerId))) throw privacyError(profile);
+  return profile;
 }
 
 export async function getProfileByUsername(username: string): Promise<Profile | null> {
@@ -158,7 +212,11 @@ export async function getProfileByUsername(username: string): Promise<Profile | 
     .eq("username", username.replace(/^@/, "").toLowerCase())
     .maybeSingle();
   if (error) throw new ApiError(error.message, error.code);
-  return (data as Profile) ?? null;
+  if (!data) return null;
+  const profile = data as Profile;
+  const viewerId = await getViewerId();
+  if (!(await canViewProfile(profile, viewerId))) throw privacyError(profile);
+  return profile;
 }
 
 export type ProfileUpdate = Partial<{
@@ -180,6 +238,7 @@ export type ProfileUpdate = Partial<{
   show_boat: boolean;
   show_online: boolean;
   allow_connection_requests: boolean;
+  show_in_discovery: boolean;
   onboarding_completed: boolean;
 }>;
 
@@ -203,6 +262,12 @@ export async function updateMyProfile(userId: string, patch: ProfileUpdate): Pro
     track("profile_complete", { source: "profile_update" });
   }
   return data as Profile;
+}
+
+/** Soft-deletes the caller's account: scrubs PII, hides from discovery/public reads. */
+export async function deleteMyAccount(): Promise<void> {
+  const { error } = await client().rpc("delete_my_account");
+  if (error) throw new ApiError(error.message, error.code);
 }
 
 export async function listInterests(): Promise<Interest[]> {
@@ -391,12 +456,13 @@ export function profileCompletion(profile: Profile, opts: {
 }): { percent: number; missing: string[] } {
   const checks: { ok: boolean; label: string }[] = [
     { ok: !!profile.avatar_url, label: "Add a profile photo" },
+    { ok: !!profile.cover_url, label: "Add a cover photo" },
     { ok: !!profile.home_lake_id, label: "Choose your home lake" },
     { ok: !!profile.bio && profile.bio.trim().length > 8, label: "Write a short bio" },
     { ok: opts.interestCount >= 3, label: "Pick at least 3 interests" },
     { ok: opts.hasBoat, label: "Add your boat" },
     { ok: opts.photoCount >= 1, label: "Add a gallery photo" },
-    { ok: (opts.connectionCount ?? 0) >= 1, label: "Connect with someone" },
+    { ok: (opts.connectionCount ?? 0) >= 3, label: "Connect with 3 people" },
   ];
   const done = checks.filter((c) => c.ok).length;
   return {
@@ -475,6 +541,57 @@ export async function getMiniProfile(profileId: string): Promise<{
     .filter((i: Interest) => myInterestIds.includes(i.id))
     .map((i: Interest) => i.label);
   return { profile, boat, interestLabels, status };
+}
+
+/** Batch boat + interest labels for discovery cards (avoids N+1 per person). */
+export type PersonDetail = {
+  boatLabel: string | null;
+  interestLabels: string[];
+};
+
+export async function getPeopleDetails(
+  profileIds: string[]
+): Promise<Record<string, PersonDetail>> {
+  const ids = Array.from(new Set(profileIds.filter(Boolean)));
+  if (!ids.length) return {};
+
+  const [boatsRes, interestsRes, catalog] = await Promise.all([
+    client()
+      .from("boats")
+      .select("owner_id, name, nickname, is_primary")
+      .in("owner_id", ids)
+      .order("is_primary", { ascending: false }),
+    client().from("profile_interests").select("profile_id, interest_id").in("profile_id", ids),
+    listInterests(),
+  ]);
+  if (boatsRes.error) throw new ApiError(boatsRes.error.message, boatsRes.error.code);
+  if (interestsRes.error) throw new ApiError(interestsRes.error.message, interestsRes.error.code);
+
+  const labelByInterestId = Object.fromEntries(catalog.map((i) => [i.id, i.label]));
+  const boatByUser: Record<string, string> = {};
+  for (const row of boatsRes.data ?? []) {
+    const uid = row.owner_id as string;
+    if (boatByUser[uid]) continue;
+    boatByUser[uid] = ((row.name ?? row.nickname) as string) || "Boat";
+  }
+
+  const interestsByUser: Record<string, string[]> = {};
+  for (const row of interestsRes.data ?? []) {
+    const pid = row.profile_id as string;
+    const label = labelByInterestId[row.interest_id as string];
+    if (!label) continue;
+    if (!interestsByUser[pid]) interestsByUser[pid] = [];
+    if (interestsByUser[pid].length < 4) interestsByUser[pid].push(label);
+  }
+
+  const result: Record<string, PersonDetail> = {};
+  for (const id of ids) {
+    result[id] = {
+      boatLabel: boatByUser[id] ?? null,
+      interestLabels: interestsByUser[id] ?? [],
+    };
+  }
+  return result;
 }
 
 /** Connections */
