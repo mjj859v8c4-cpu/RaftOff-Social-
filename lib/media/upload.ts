@@ -57,10 +57,14 @@ export async function uploadPhoto(input: {
   purpose: "profile" | "boat" | "check_in" | "event" | "post";
   entityType?: string;
   entityId?: string;
+  /** Set when caller already ran compressImage (avoids double compression). */
+  skipCompress?: boolean;
 }) {
   assertOnline();
   const supabase = client();
-  const compressed = await compressImage(input.uri);
+  const compressed = input.skipCompress
+    ? { uri: input.uri, width: undefined as number | undefined, height: undefined as number | undefined }
+    : await compressImage(input.uri);
   const path = `${input.userId}/${Date.now()}.jpg`;
   const blob = await uriToBlob(compressed.uri);
 

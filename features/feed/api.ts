@@ -5,6 +5,7 @@
  */
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ApiError } from "@/lib/api/production";
+import { clampLimit } from "@/lib/pagination";
 import { listConnections } from "@/features/profiles/api";
 import type { ActivityItem, Boat, Post, Profile, UserStatus } from "@/types/raftoff";
 
@@ -33,9 +34,10 @@ function mapPost(row: any): Post {
 /** Recent activity from a profile's connections (and their own posts). */
 export async function listConnectionActivity(
   profileId: string,
-  limit = 30
+  limit?: number
 ): Promise<ActivityItem[]> {
   const sb = client();
+  const capped = clampLimit(limit);
   const connectionIds = await listConnections(profileId);
   const audienceIds = [profileId, ...connectionIds];
   if (audienceIds.length <= 1) return [];
@@ -51,7 +53,7 @@ export async function listConnectionActivity(
       .eq("moderation_status", "visible")
       .eq("audience", "public")
       .order("created_at", { ascending: false })
-      .limit(limit),
+      .limit(capped),
     sb
       .from("boats")
       .select(`*, profiles:owner_id(${PROFILE_CARD})`)
@@ -59,14 +61,14 @@ export async function listConnectionActivity(
       .eq("visibility", "public")
       .gte("created_at", since)
       .order("created_at", { ascending: false })
-      .limit(limit),
+      .limit(capped),
     sb
       .from("user_statuses")
       .select(`*, profiles:profile_id(${PROFILE_CARD})`)
       .in("profile_id", connectionIds.length ? connectionIds : ["00000000-0000-0000-0000-000000000000"])
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false })
-      .limit(limit),
+      .limit(capped),
   ]);
 
   if (postsRes.error) throw new ApiError(postsRes.error.message, postsRes.error.code);
@@ -101,7 +103,7 @@ export async function listConnectionActivity(
   }
 
   items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-  return items.slice(0, limit);
+  return items.slice(0, capped);
 }
 
 /** Quick status composer — backed by the set_my_status / clear_my_status RPCs. */

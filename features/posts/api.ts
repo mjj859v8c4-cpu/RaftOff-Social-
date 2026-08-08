@@ -6,6 +6,7 @@
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ApiError } from "@/lib/api/production";
 import { uploadPhoto, pickAndCompressImage } from "@/lib/media/upload";
+import { clampLimit } from "@/lib/pagination";
 import { track } from "@/lib/analytics";
 import { assertOnline } from "@/lib/network";
 import type { Post } from "@/types/raftoff";
@@ -40,6 +41,7 @@ export async function pickAndUploadPostPhoto(userId: string): Promise<string | n
     bucket: "post-photos",
     uri: compressed.uri,
     purpose: "post",
+    skipCompress: true,
   });
   return url;
 }
@@ -120,12 +122,14 @@ export async function toggleSavePost(postId: string, profileId: string): Promise
   return { saved: true };
 }
 
-export async function listSavedPosts(profileId: string): Promise<Post[]> {
+export async function listSavedPosts(profileId: string, limit?: number): Promise<Post[]> {
+  const capped = clampLimit(limit);
   const { data, error } = await client()
     .from("post_saves")
     .select(`created_at, posts:post_id(${POST_SELECT})`)
     .eq("profile_id", profileId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(capped);
   if (error) throw new ApiError(error.message, error.code);
   return (data ?? [])
     .map((row: any) => row.posts)
@@ -144,7 +148,8 @@ export async function getSavedPostIds(profileId: string, postIds: string[]): Pro
   return new Set((data ?? []).map((r) => r.post_id as string));
 }
 
-export async function listPostsByAuthor(authorId: string, limit = 30): Promise<Post[]> {
+export async function listPostsByAuthor(authorId: string, limit?: number): Promise<Post[]> {
+  const capped = clampLimit(limit);
   const { data, error } = await client()
     .from("posts")
     .select(POST_SELECT)
@@ -152,7 +157,7 @@ export async function listPostsByAuthor(authorId: string, limit = 30): Promise<P
     .is("deleted_at", null)
     .eq("moderation_status", "visible")
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .limit(capped);
   if (error) throw new ApiError(error.message, error.code);
   return (data ?? []).map(mapPostRow);
 }

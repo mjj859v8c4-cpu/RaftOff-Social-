@@ -1,5 +1,6 @@
 import React from "react";
-import { Image, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { LazyImage } from "@/components/ui/LazyImage";
 import { colors } from "@/lib/theme";
 
 export function Avatar({
@@ -13,7 +14,7 @@ export function Avatar({
 }) {
   const dim = { width: size, height: size, borderRadius: size / 2 };
   if (uri) {
-    return <Image source={{ uri }} style={[styles.avatar, dim]} />;
+    return <LazyImage uri={uri} style={[styles.avatar, dim]} />;
   }
   return (
     <View style={[styles.avatar, styles.fallback, dim]}>

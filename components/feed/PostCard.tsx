@@ -1,5 +1,7 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Avatar } from "@/components/social/Avatar";
+import { LazyImage } from "@/components/ui/LazyImage";
 import { colors, spacing, vibes } from "@/lib/theme";
 import type { Post } from "@/types/raftoff";
 
@@ -37,15 +39,7 @@ export function PostCard({
   return (
     <View style={styles.card}>
       <Pressable style={styles.row} onPress={onOpenProfile} disabled={!onOpenProfile}>
-        {post.profile?.avatar_url ? (
-          <Image source={{ uri: post.profile.avatar_url }} style={styles.avatar} />
-        ) : (
-          <View style={[styles.avatar, styles.avatarFallback]}>
-            <Text style={styles.avatarText}>
-              {(post.profile?.display_name ?? "?").slice(0, 2).toUpperCase()}
-            </Text>
-          </View>
-        )}
+        <Avatar uri={post.profile?.avatar_url} name={post.profile?.display_name} size={40} />
         <View style={{ flex: 1 }}>
           <Text style={styles.author}>{post.profile?.display_name ?? "Member"}</Text>
           <Text style={styles.meta}>
@@ -61,11 +55,11 @@ export function PostCard({
       {photos.length ? (
         <View style={styles.photoWrap}>
           {photos.length === 1 ? (
-            <Image source={{ uri: photos[0] }} style={styles.photoSingle} />
+            <LazyImage uri={photos[0]} style={styles.photoSingle} resizeMode="cover" />
           ) : (
             <View style={styles.photoGrid}>
               {photos.slice(0, 4).map((url, idx) => (
-                <Image key={url + idx} source={{ uri: url }} style={styles.photoGridItem} />
+                <LazyImage key={url + idx} uri={url} style={styles.photoGridItem} resizeMode="cover" />
               ))}
             </View>
           )}
@@ -99,9 +93,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   row: { flexDirection: "row", gap: 10, alignItems: "center" },
-  avatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.bgSoft },
-  avatarFallback: { alignItems: "center", justifyContent: "center" },
-  avatarText: { color: colors.text, fontWeight: "700", fontSize: 12 },
   author: { color: colors.text, fontWeight: "700" },
   meta: { color: colors.muted, fontSize: 12, marginTop: 2 },
   body: { color: colors.text, fontSize: 15, lineHeight: 22 },

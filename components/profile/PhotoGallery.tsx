@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { LazyImage } from "@/components/ui/LazyImage";
 import { colors } from "@/lib/theme";
 import type { ProfilePhoto } from "@/types/raftoff";
 import { GalleryLightbox } from "@/components/profile/GalleryLightbox";
@@ -37,7 +38,7 @@ export function PhotoGallery({
         {photos.map((photo, i) => (
           <View key={photo.id} style={styles.tileWrap}>
             <Pressable onPress={() => setLightboxIndex(i)}>
-              <Image source={{ uri: photo.url }} style={styles.tile} />
+              <LazyImage uri={photo.url} style={styles.tile} />
             </Pressable>
             {editable ? (
               <>
