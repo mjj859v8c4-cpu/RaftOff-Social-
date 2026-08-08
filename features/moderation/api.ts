@@ -11,6 +11,18 @@ function client() {
   return supabase;
 }
 
+/** Report categories — must match `reports_category_check` in Supabase migrations. */
+export const REPORT_CATEGORIES = [
+  ["spam", "Spam"],
+  ["harassment", "Harassment"],
+  ["fake_profile", "Fake profile"],
+  ["inappropriate_content", "Inappropriate"],
+  ["unsafe_activity", "Unsafe on the water"],
+  ["other", "Other"],
+] as const;
+
+export type ReportCategory = (typeof REPORT_CATEGORIES)[number][0];
+
 export async function blockUser(blockerId: string, blockedId: string) {
   assertOnline();
   if (blockerId === blockedId) throw new ApiError("Cannot block yourself");
@@ -47,6 +59,7 @@ export async function reportContent(input: {
   targetType: "user" | "post" | "comment" | "event" | "check_in";
   targetId: string;
   reason: string;
+  category?: ReportCategory | null;
 }) {
   assertOnline();
   const { data, error } = await client()
@@ -56,12 +69,13 @@ export async function reportContent(input: {
       target_type: input.targetType,
       target_id: input.targetId,
       reason: input.reason.trim(),
+      category: input.category ?? null,
       status: "open",
     })
     .select("*")
     .single();
   if (error) throw new ApiError(error.message, error.code);
-  track("report_content", { targetType: input.targetType });
+  track("report_content", { targetType: input.targetType, category: input.category ?? "unset" });
   return data;
 }
 
