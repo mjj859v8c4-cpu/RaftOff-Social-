@@ -153,6 +153,40 @@
     },
   ];
 
+  /** Demo profiles for check-in authors (web preview — no live API) */
+  var DEMO_PROFILES = {
+    Maya: {
+      username: "maya_on_the_lake",
+      boat: "Sea Ray 250 SLX",
+      interests: ["Party", "Music", "Raft-ups"],
+    },
+    Jordan: {
+      username: "jordan_walleye",
+      boat: "Lund 1875 Pro-V",
+      interests: ["Fishing", "Flats", "Early mornings"],
+    },
+    Sam: {
+      username: "sam_family_float",
+      boat: "Bennington 22 SS",
+      interests: ["Family", "Beach days", "Swimming"],
+    },
+    Alex: {
+      username: "alex_chill_cove",
+      boat: "Pontoon · 24ft",
+      interests: ["Chill", "Sunset floats", "Reading"],
+    },
+    Riley: {
+      username: "riley_dockside",
+      boat: null,
+      interests: ["Food", "Dock & dine", "Marina life"],
+    },
+    You: {
+      username: "raftoff_you",
+      boat: "Your boat",
+      interests: ["Social boating", "Fishing", "Family"],
+    },
+  };
+
   var seedEvents = [
     {
       id: "e1",
@@ -235,6 +269,110 @@
       .join("")
       .slice(0, 2)
       .toUpperCase();
+  }
+
+  function profileForAuthor(name) {
+    var known = DEMO_PROFILES[name];
+    if (known) return known;
+    return {
+      username: name.toLowerCase().replace(/\s+/g, "_") + "_lake",
+      boat: null,
+      interests: ["Boating", "Lake St. Clair"],
+    };
+  }
+
+  function uniqueAuthorsFromCheckins(list) {
+    var seen = {};
+    var authors = [];
+    (list || []).forEach(function (c) {
+      if (!seen[c.author]) {
+        seen[c.author] = true;
+        authors.push(c.author);
+      }
+    });
+    return authors;
+  }
+
+  function renderSheetPeople(nearby) {
+    var el = $("sheet-people");
+    if (!el) return;
+    var authors = uniqueAuthorsFromCheckins(nearby);
+    if (!authors.length) {
+      el.hidden = true;
+      el.innerHTML = "";
+      return;
+    }
+    var maxShow = 6;
+    var shown = authors.slice(0, maxShow);
+    var overflow = authors.length - shown.length;
+    el.hidden = false;
+    el.innerHTML =
+      '<span class="sheet-people-label">Here now · ' +
+      authors.length +
+      (authors.length === 1 ? " boater" : " boaters") +
+      "</span>" +
+      '<div class="sheet-people-row" role="list">' +
+      shown
+        .map(function (name) {
+          return (
+            '<button type="button" class="avatar-btn" data-author="' +
+            escapeHtml(name) +
+            '" role="listitem" aria-label="' +
+            escapeHtml(name) +
+            ' profile">' +
+            escapeHtml(initials(name)) +
+            "</button>"
+          );
+        })
+        .join("") +
+      (overflow > 0
+        ? '<span class="avatar-overflow" aria-hidden="true">+' + overflow + "</span>"
+        : "") +
+      "</div>";
+    el.onclick = function (event) {
+      var btn = event.target.closest("[data-author]");
+      if (!btn) return;
+      event.stopPropagation();
+      openMiniProfile(btn.getAttribute("data-author"));
+    };
+  }
+
+  function closeMiniProfile() {
+    var panel = $("mini-profile");
+    if (panel) panel.hidden = true;
+    document.querySelectorAll(".avatar-btn.is-active-ring").forEach(function (btn) {
+      btn.classList.remove("is-active-ring");
+    });
+  }
+
+  function openMiniProfile(author) {
+    if (!author) return;
+    var profile = profileForAuthor(author);
+    var panel = $("mini-profile");
+    if (!panel) return;
+    $("mini-profile-avatar").textContent = initials(author);
+    $("mini-profile-name").textContent = author;
+    $("mini-profile-handle").textContent = "@" + profile.username + " · Lake St. Clair";
+    var boatEl = $("mini-profile-boat");
+    if (profile.boat) {
+      boatEl.hidden = false;
+      boatEl.textContent = "🚤 " + profile.boat;
+    } else {
+      boatEl.hidden = true;
+      boatEl.textContent = "";
+    }
+    var interestsEl = $("mini-profile-interests");
+    interestsEl.innerHTML = (profile.interests || [])
+      .map(function (tag) {
+        return "<span>" + escapeHtml(tag) + "</span>";
+      })
+      .join("");
+    panel.hidden = false;
+    document.querySelectorAll(".avatar-btn.is-active-ring").forEach(function (btn) {
+      btn.classList.remove("is-active-ring");
+    });
+    var activeBtn = document.querySelector('.avatar-btn[data-author="' + author + '"]');
+    if (activeBtn) activeBtn.classList.add("is-active-ring");
   }
 
   function formatTime(ts) {
@@ -639,6 +777,12 @@
     $("sheet-meta").textContent =
       c.author + " · " + formatTime(c.createdAt) + " · " + c.precision + " precision";
     $("sheet-body").textContent = c.message || "Checked in nearby.";
+    renderSheetPeople(
+      activeCheckins(checkins).filter(function (item) {
+        return item.placeId === c.placeId;
+      })
+    );
+    closeMiniProfile();
     sheet.hidden = false;
     sheet.dataset.placeId = c.placeId;
   }
@@ -662,6 +806,7 @@
       $("sheet-body").textContent =
         place.pitch ||
         "Partner listing on RaftOff — ask about Featured ads & sponsored placement.";
+      renderSheetPeople(nearby);
     } else {
       $("sheet-vibe").textContent = nearby.length
         ? nearby.length + " active nearby"
@@ -671,7 +816,9 @@
       $("sheet-body").textContent = nearby.length
         ? "Live activity here. Drop Anchor to join the map."
         : "Quiet right now — be the first to Drop Anchor.";
+      renderSheetPeople(nearby);
     }
+    closeMiniProfile();
     sheet.hidden = false;
     sheet.dataset.placeId = place.id;
   }
@@ -731,6 +878,7 @@
       liveMap.on("click", function () {
         var sheet = $("map-sheet");
         if (sheet) sheet.hidden = true;
+        closeMiniProfile();
       });
 
       window.addEventListener("resize", function () {
@@ -766,6 +914,18 @@
 
   $("sheet-close").addEventListener("click", function () {
     $("map-sheet").hidden = true;
+    closeMiniProfile();
+  });
+
+  $("mini-profile-close").addEventListener("click", function () {
+    closeMiniProfile();
+  });
+
+  $("mini-profile-link").addEventListener("click", function () {
+    var name = $("mini-profile-name").textContent;
+    closeMiniProfile();
+    $("map-sheet").hidden = true;
+    toast("Full profile for " + name + " (coming in app)");
   });
 
   $("fab-anchor").addEventListener("click", function () {

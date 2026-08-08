@@ -503,6 +503,148 @@ a {
   font-size: 0.88rem;
 }
 
+.sheet-people {
+  margin: 0.55rem 0 0.45rem;
+}
+
+.sheet-people[hidden] {
+  display: none;
+}
+
+.sheet-people-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 0.45rem;
+}
+
+.sheet-people-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.avatar-btn {
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  border: 2px solid rgba(46, 242, 200, 0.35);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: linear-gradient(145deg, #1a708a, #0a3d4a);
+  color: #e8f4fb;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.avatar-btn:hover,
+.avatar-btn:focus-visible {
+  transform: scale(1.08);
+  border-color: var(--cyan);
+  outline: none;
+}
+
+.avatar-btn.is-active-ring {
+  border-color: var(--action);
+  box-shadow: 0 0 0 2px rgba(255, 61, 130, 0.25);
+}
+
+.avatar-overflow {
+  min-width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--bg-soft);
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0 0.45rem;
+  display: grid;
+  place-items: center;
+}
+
+.mini-profile {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100% - 2.5rem);
+  max-width: 280px;
+  background: rgba(8, 24, 36, 0.98);
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  padding: 1.15rem 1rem 1rem;
+  text-align: center;
+  z-index: 12;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  animation: rise 0.28s var(--ease) both;
+}
+
+.mini-profile[hidden] {
+  display: none;
+}
+
+.mini-profile-close {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.45rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.35rem;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.mini-profile .avatar.lg {
+  margin: 0 auto 0.65rem;
+}
+
+.mini-profile h3 {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.mini-profile-handle {
+  margin: 0 0 0.55rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.mini-profile-boat {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+
+.mini-profile-boat[hidden] {
+  display: none;
+}
+
+.mini-profile .interest-chips {
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.mini-profile-link {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+}
+
 .sheet-actions {
   display: flex;
   flex-wrap: wrap;
