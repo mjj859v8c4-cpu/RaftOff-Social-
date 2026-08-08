@@ -16,6 +16,7 @@ import { dropAnchorSchema, type DurationChoice } from "@/lib/validation";
 import type { Audience, Precision } from "@/types/raftoff";
 import { requestForegroundLocation } from "@/lib/permissions/location";
 import { DURATION_CHOICES, resolveDurationMinutes } from "@/lib/time/duration";
+import { SafetyBanner } from "@/components/safety/SafetyBanner";
 
 const AUDIENCES: Audience[] = ["public", "followers", "friends", "crew", "private"];
 const PRECISIONS: { id: Precision; label: string }[] = [
@@ -102,6 +103,8 @@ export default function DropAnchorScreen() {
       <Text style={styles.lead}>
         Temporary check-in on {lakeName}. You control vibe, audience, precision, and duration.
       </Text>
+
+      <SafetyBanner variant="check_in" />
 
       {activeMine ? (
         <View style={styles.activeBanner}>

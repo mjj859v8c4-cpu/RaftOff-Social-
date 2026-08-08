@@ -21,6 +21,7 @@ import {
 } from "@/features/profiles/api";
 import { getSupabase } from "@/lib/supabase/client";
 import type { DirectMessage } from "@/types/raftoff";
+import { SafetyBanner } from "@/components/safety/SafetyBanner";
 
 export default function MessageThreadScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -106,6 +107,10 @@ export default function MessageThreadScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
+      <View style={styles.safety}>
+        <SafetyBanner variant="message" />
+      </View>
+
       {loading ? (
         <ActivityIndicator color={colors.action} style={{ marginTop: 40 }} />
       ) : (
@@ -169,6 +174,7 @@ const styles = StyleSheet.create({
   },
   title: { color: colors.text, fontWeight: "800", fontSize: 16 },
   link: { color: colors.muted, fontWeight: "600" },
+  safety: { paddingHorizontal: spacing.lg, paddingBottom: 8 },
   list: { padding: spacing.lg, paddingBottom: 12, gap: 8, flexGrow: 1 },
   bubble: {
     maxWidth: "78%",

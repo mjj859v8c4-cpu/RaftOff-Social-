@@ -45,6 +45,12 @@ export async function createCheckInRemote(input: DropAnchorInput, userId: string
   }
 
   track("drop_anchor", { locationId: input.locationId, vibe: input.vibe });
+  track("check_in", {
+    location_id: input.locationId,
+    vibe: input.vibe,
+    audience: input.audience,
+    precision: input.precision,
+  });
   return { mode: "remote" as const, checkIn: data };
 }
 

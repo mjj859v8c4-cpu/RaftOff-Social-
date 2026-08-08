@@ -3,6 +3,7 @@
  */
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 import { ApiError } from "@/lib/api/production";
+import { track } from "@/lib/analytics";
 import type {
   Boat,
   ConnectionRequest,
@@ -170,6 +171,7 @@ export type ProfileUpdate = Partial<{
   home_city: string | null;
   home_marina: string | null;
   identity_tags: string[];
+  badges: string[];
   primary_boat_id: string | null;
   profile_visibility: string;
   message_privacy: string;
@@ -197,6 +199,9 @@ export async function updateMyProfile(userId: string, patch: ProfileUpdate): Pro
     .select(PROFILE_SELECT)
     .single();
   if (error) throw new ApiError(error.message, error.code);
+  if (patch.onboarding_completed === true) {
+    track("profile_complete", { source: "profile_update" });
+  }
   return data as Profile;
 }
 
@@ -296,8 +301,31 @@ export async function upsertMyBoat(input: {
 }
 
 export async function deleteMyBoat(boatId: string, ownerId: string) {
-  const { error } = await client().from("boats").delete().eq("id", boatId).eq("owner_id", ownerId);
+  const sb = client();
+  const { error } = await sb.from("boats").delete().eq("id", boatId).eq("owner_id", ownerId);
   if (error) throw new ApiError(error.message, error.code);
+  // Clear the profile's primary_boat_id if it pointed at the boat we just removed.
+  await sb
+    .from("profiles")
+    .update({ primary_boat_id: null })
+    .eq("id", ownerId)
+    .eq("primary_boat_id", boatId);
+}
+
+/** Flip which of a user's boats is primary — used by the "Set primary" action on Edit Profile. */
+export async function setPrimaryBoat(boatId: string, ownerId: string): Promise<void> {
+  const sb = client();
+  await sb
+    .from("boats")
+    .update({ is_primary: false, updated_at: new Date().toISOString() })
+    .eq("owner_id", ownerId);
+  const { error } = await sb
+    .from("boats")
+    .update({ is_primary: true, updated_at: new Date().toISOString() })
+    .eq("id", boatId)
+    .eq("owner_id", ownerId);
+  if (error) throw new ApiError(error.message, error.code);
+  await sb.from("profiles").update({ primary_boat_id: boatId }).eq("id", ownerId);
 }
 
 export async function listProfilePhotos(profileId: string): Promise<ProfilePhoto[]> {
@@ -467,11 +495,13 @@ export async function requestConnection(requesterId: string, recipientId: string
     target_type: "profile",
     target_id: requesterId,
   });
+  track("connect_user", { recipient_id: recipientId });
 }
 
 export async function acceptConnection(requestId: string) {
   const { error } = await client().rpc("accept_connection_request", { request_id: requestId });
   if (error) throw new ApiError(error.message, error.code);
+  track("connect_user", { source: "accept" });
 }
 
 export async function declineConnection(requestId: string, recipientId: string) {
@@ -521,6 +551,59 @@ export async function countFollowing(profileId: string): Promise<number> {
   return count ?? 0;
 }
 
+/** Profiles that follow `profileId` (§7 / §37). */
+export async function listFollowers(profileId: string, limit = 100): Promise<Profile[]> {
+  const { data, error } = await client()
+    .from("follows")
+    .select(`follower:follower_id(${PROFILE_SELECT})`)
+    .eq("following_id", profileId)
+    .limit(limit);
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? [])
+    .map((row) => row.follower as unknown as Profile)
+    .filter(Boolean);
+}
+
+/** Profiles that `profileId` follows (§7 / §37). */
+export async function listFollowing(profileId: string, limit = 100): Promise<Profile[]> {
+  const { data, error } = await client()
+    .from("follows")
+    .select(`following:following_id(${PROFILE_SELECT})`)
+    .eq("follower_id", profileId)
+    .limit(limit);
+  if (error) throw new ApiError(error.message, error.code);
+  return (data ?? [])
+    .map((row) => row.following as unknown as Profile)
+    .filter(Boolean);
+}
+
+/** Active public check-in for a profile (for “On The Water” on profiles). */
+export async function getPublicActiveCheckIn(profileId: string): Promise<{
+  location_id: string;
+  location_name: string | null;
+  vibe: string | null;
+} | null> {
+  const { data, error } = await client()
+    .from("check_ins")
+    .select("location_id, vibe, locations:location_id(name), profiles:user_id(show_on_water)")
+    .eq("user_id", profileId)
+    .eq("status", "active")
+    .order("starts_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw new ApiError(error.message, error.code);
+  if (!data) return null;
+  const show =
+    (data.profiles as unknown as { show_on_water?: boolean } | null)?.show_on_water !== false;
+  if (!show) return null;
+  const loc = data.locations as unknown as { name?: string } | null;
+  return {
+    location_id: data.location_id as string,
+    location_name: loc?.name ?? null,
+    vibe: (data.vibe as string) ?? null,
+  };
+}
+
 /** Followers (§7) */
 export async function isFollowing(meId: string, targetId: string): Promise<boolean> {
   const { data, error } = await client()
@@ -536,6 +619,20 @@ export async function isFollowing(meId: string, targetId: string): Promise<boole
 export async function followProfile(targetId: string) {
   const { error } = await client().rpc("follow_profile", { target: targetId });
   if (error) throw new ApiError(error.message, error.code);
+  track("follow_user", { following_id: targetId });
+}
+
+/** Batch follow-status lookup — which of `targetIds` does `meId` already follow. */
+export async function getFollowingSet(meId: string, targetIds: string[]): Promise<Set<string>> {
+  const ids = Array.from(new Set(targetIds.filter((id) => id && id !== meId)));
+  if (!ids.length) return new Set();
+  const { data, error } = await client()
+    .from("follows")
+    .select("following_id")
+    .eq("follower_id", meId)
+    .in("following_id", ids);
+  if (error) throw new ApiError(error.message, error.code);
+  return new Set((data ?? []).map((r) => r.following_id as string));
 }
 
 export async function unfollowProfile(targetId: string) {
@@ -790,6 +887,7 @@ export async function sendMessage(
     .select("id, conversation_id, sender_id, body, created_at, read_at")
     .single();
   if (error) throw new ApiError(error.message, error.code);
+  track("send_message", { conversation_id: conversationId });
   await client()
     .from("conversations")
     .update({ updated_at: new Date().toISOString() })

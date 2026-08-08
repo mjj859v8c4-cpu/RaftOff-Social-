@@ -36,6 +36,7 @@ import { ReportBlockModal } from "@/components/moderation/ReportBlockModal";
 import { ProfileBadges } from "@/components/profile/ProfileBadges";
 import { PhotoGallery } from "@/components/profile/PhotoGallery";
 import { track } from "@/lib/analytics";
+import { SafetyBanner } from "@/components/safety/SafetyBanner";
 
 export default function PublicProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
@@ -157,6 +158,11 @@ export default function PublicProfileScreen() {
           </View>
         ) : null}
         {profile.bio ? <Text style={styles.bio}>{profile.bio}</Text> : null}
+        {!isSelf ? (
+          <View style={styles.safety}>
+            <SafetyBanner variant="profile" />
+          </View>
+        ) : null}
         <Text style={styles.stats}>
           {counts.connections} Connections · {counts.followers} Followers · {counts.following} Following
         </Text>
@@ -356,6 +362,7 @@ const styles = StyleSheet.create({
   },
   statusPillText: { color: colors.text, fontSize: 13, fontWeight: "600" },
   bio: { color: colors.muted, marginTop: 10, lineHeight: 20 },
+  safety: { marginTop: 10 },
   stats: { color: colors.text, marginTop: 12, fontWeight: "700" },
   actions: { flexDirection: "row", gap: 10, paddingHorizontal: spacing.lg, marginBottom: 12 },
   connect: {

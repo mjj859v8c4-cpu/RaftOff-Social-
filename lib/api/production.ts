@@ -12,6 +12,7 @@ import type {
   Profile,
 } from "@/types/raftoff";
 import type { DropAnchorInput } from "@/lib/validation";
+import { clampLimit, FEED_PAGE_SIZE } from "@/lib/pagination";
 
 export class ApiError extends Error {
   constructor(message: string, public code?: string) {
@@ -206,6 +207,12 @@ export async function createCheckIn(
   }
 
   track("drop_anchor", { locationId: input.locationId, vibe: input.vibe });
+  track("check_in", {
+    location_id: input.locationId,
+    vibe: input.vibe,
+    audience: input.audience,
+    precision: input.precision,
+  });
   return data as CheckIn;
 }
 
@@ -231,8 +238,9 @@ export async function listActiveCheckIns(lakeId: string): Promise<CheckIn[]> {
 }
 
 /** Feed / posts */
-export async function listLakeFeed(lakeId: string): Promise<Post[]> {
+export async function listLakeFeed(lakeId: string, limit?: number): Promise<Post[]> {
   assertOnline();
+  const capped = clampLimit(limit, FEED_PAGE_SIZE);
   const { data, error } = await client()
     .from("posts")
     .select(
@@ -242,7 +250,7 @@ export async function listLakeFeed(lakeId: string): Promise<Post[]> {
     .is("deleted_at", null)
     .eq("moderation_status", "visible")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(capped);
 
   if (error) throw new ApiError(error.message, error.code);
 
@@ -297,14 +305,16 @@ export async function addComment(postId: string, userId: string, text: string) {
   return data;
 }
 
-export async function listComments(postId: string) {
+export async function listComments(postId: string, limit?: number) {
   assertOnline();
+  const capped = clampLimit(limit);
   const { data, error } = await client()
     .from("comments")
     .select("*, profiles:author_id(id, username, display_name, avatar_url)")
     .eq("post_id", postId)
     .is("deleted_at", null)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(capped);
   if (error) throw new ApiError(error.message, error.code);
   return data ?? [];
 }
