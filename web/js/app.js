@@ -220,6 +220,49 @@
     },
   ];
 
+  var seedMessages = [
+    {
+      id: "m1",
+      name: "Maya",
+      handle: "@maya_on_the_lake",
+      preview: "See you at Strawberry around 2?",
+      unread: 2,
+      updatedAt: Date.now() - 8 * 60000,
+    },
+    {
+      id: "m2",
+      name: "Jordan",
+      handle: "@jordan_flats",
+      preview: "Walleye bite was solid near the flats channel",
+      unread: 0,
+      updatedAt: Date.now() - 45 * 60000,
+    },
+    {
+      id: "m3",
+      name: "Sam",
+      handle: "@sam_family_float",
+      preview: "Bringing the kids — calm water spot?",
+      unread: 1,
+      updatedAt: Date.now() - 2 * 3600000,
+    },
+  ];
+
+  var seedDiscoverPeople = {
+    suggested: [
+      { name: "Alex", handle: "@alex_raft", note: "3 mutual connections · Party vibe" },
+      { name: "Riley", handle: "@riley_dock", note: "Also on Lake St. Clair · Fishing" },
+      { name: "Casey", handle: "@casey_crew", note: "Suggested for your crew interests" },
+    ],
+    lake: [
+      { name: "Morgan", handle: "@morgan_bay", note: "Checked in at Anchor Bay today" },
+      { name: "Taylor", handle: "@taylor_mile", note: "Nautical Mile regular · Chill" },
+    ],
+    new: [
+      { name: "Jamie", handle: "@jamie_new", note: "New to RaftOff · Family boating" },
+      { name: "Quinn", handle: "@quinn_lake", note: "Just joined · Watersports" },
+    ],
+  };
+
   /* utils */
   function $(id) {
     return document.getElementById(id);
@@ -486,7 +529,7 @@
   });
 
   var startHash = (location.hash || "#map").slice(1);
-  if (["map", "feed", "anchor", "events", "profile"].indexOf(startHash) === -1) {
+  if (["map", "feed", "messages", "discover", "anchor", "events", "profile"].indexOf(startHash) === -1) {
     startHash = "map";
   }
   showTab(startHash);
@@ -1007,6 +1050,127 @@
   }
   renderVibeChips("feed-filters", feedVibeFilter, setFeedFilter, true);
   renderFeed();
+
+  /* messages */
+  function renderMessages() {
+    var list = $("message-list");
+    if (!list) return;
+    if (!seedMessages.length) {
+      list.innerHTML =
+        '<li class="feed-item" style="display:block;color:var(--muted)">No conversations yet.</li>';
+      return;
+    }
+    list.innerHTML = seedMessages
+      .slice()
+      .sort(function (a, b) {
+        return b.updatedAt - a.updatedAt;
+      })
+      .map(function (m) {
+        return (
+          '<li class="feed-item message-item" data-thread="' +
+          escapeHtml(m.id) +
+          '">' +
+          '<div class="avatar">' +
+          escapeHtml(initials(m.name)) +
+          "</div><div>" +
+          '<div class="feed-meta"><span class="feed-author">' +
+          escapeHtml(m.name) +
+          '</span><span class="feed-time">' +
+          escapeHtml(formatTime(m.updatedAt)) +
+          (m.unread
+            ? ' <span class="msg-unread">' + m.unread + " new</span>"
+            : "") +
+          "</span></div>" +
+          '<p class="feed-body">' +
+          escapeHtml(m.preview) +
+          "</p>" +
+          '<p class="feed-place">' +
+          escapeHtml(m.handle) +
+          "</p></div></li>"
+        );
+      })
+      .join("");
+  }
+
+  $("message-list") &&
+    $("message-list").addEventListener("click", function (event) {
+      var item = event.target.closest("[data-thread]");
+      if (!item) return;
+      var thread = seedMessages.find(function (m) {
+        return m.id === item.getAttribute("data-thread");
+      });
+      if (!thread) return;
+      thread.unread = 0;
+      renderMessages();
+      toast("Open thread with " + thread.name + " (full chat in Expo app)");
+    });
+
+  $("btn-connections") &&
+    $("btn-connections").addEventListener("click", function () {
+      toast("Connections & requests (Expo app)");
+    });
+
+  renderMessages();
+
+  /* discover */
+  var discoverFilter = "suggested";
+
+  function renderDiscover() {
+    var list = $("discover-list");
+    if (!list) return;
+    var people = seedDiscoverPeople[discoverFilter] || [];
+    if (!people.length) {
+      list.innerHTML =
+        '<li class="feed-item" style="display:block;color:var(--muted)">No people in this view yet.</li>';
+      return;
+    }
+    list.innerHTML = people
+      .map(function (p) {
+        return (
+          '<li class="feed-item discover-item">' +
+          '<div class="avatar">' +
+          escapeHtml(initials(p.name)) +
+          "</div><div>" +
+          '<div class="feed-meta"><span class="feed-author">' +
+          escapeHtml(p.name) +
+          '</span><span class="feed-place">' +
+          escapeHtml(p.handle) +
+          "</span></div>" +
+          '<p class="feed-body">' +
+          escapeHtml(p.note) +
+          "</p>" +
+          '<div class="feed-actions">' +
+          '<button type="button" class="react-btn" data-connect>Connect</button>' +
+          '<button type="button" class="react-btn" data-message>Message</button>' +
+          "</div></div></li>"
+        );
+      })
+      .join("");
+  }
+
+  document.querySelectorAll("[data-discover]").forEach(function (chip) {
+    chip.addEventListener("click", function () {
+      discoverFilter = chip.getAttribute("data-discover");
+      document.querySelectorAll("[data-discover]").forEach(function (c) {
+        c.classList.toggle("is-active", c === chip);
+      });
+      renderDiscover();
+    });
+  });
+
+  $("discover-list") &&
+    $("discover-list").addEventListener("click", function (event) {
+      if (event.target.closest("[data-connect]")) {
+        toast("Connection request sent (Expo app)");
+        return;
+      }
+      if (event.target.closest("[data-message]")) {
+        showTab("messages");
+        toast("Start a DM from Messages (Expo app)");
+      }
+    });
+
+  renderDiscover();
 
   $("feed-list").addEventListener("click", function (event) {
     var like = event.target.closest("[data-like]");

@@ -115,7 +115,33 @@
           <ul class="feed-list" id="feed-list" aria-live="polite"></ul>
         </section>
 
-        <!-- DROP ANCHOR -->
+        <!-- MESSAGES -->
+        <section class="panel" id="panel-messages" data-panel="messages">
+          <div class="panel-head row-between">
+            <div>
+              <h1>Messages</h1>
+              <p>DMs with crews on your lake</p>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-connections">Connections</button>
+          </div>
+          <ul class="feed-list message-list" id="message-list" aria-live="polite"></ul>
+        </section>
+
+        <!-- DISCOVER -->
+        <section class="panel" id="panel-discover" data-panel="discover">
+          <div class="panel-head">
+            <h1>Discover</h1>
+            <p>Find boaters, crews, and events on Lake St. Clair</p>
+          </div>
+          <div class="filter-row" id="discover-filters" aria-label="Discover filters">
+            <button type="button" class="chip is-active" data-discover="suggested">Suggested</button>
+            <button type="button" class="chip" data-discover="lake">On my lake</button>
+            <button type="button" class="chip" data-discover="new">New here</button>
+          </div>
+          <ul class="feed-list" id="discover-list" aria-live="polite"></ul>
+        </section>
+
+        <!-- DROP ANCHOR (reachable from map FAB, not in tab bar) -->
         <section class="panel" id="panel-anchor" data-panel="anchor">
           <div class="panel-head">
             <h1>Drop Anchor</h1>
@@ -267,15 +293,15 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h14M5 17h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           </span>Feed
         </button>
-        <button type="button" class="tab tab-anchor" data-tab="anchor">
+        <button type="button" class="tab tab-messages" data-tab="messages">
           <span class="tab-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 4v12M8 8h8M7 20c2-3 4-4 5-4s3 1 5 4M12 16c0 0-3 1.5-4.5 4M12 16c0 0 3 1.5 4.5 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>Anchor
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M4 6.5h16v9H7.5L4 18.5V6.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 10.5h8M8 13.5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </span>Messages
         </button>
-        <button type="button" class="tab" data-tab="events">
+        <button type="button" class="tab" data-tab="discover">
           <span class="tab-icon" aria-hidden="true">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          </span>Events
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></svg>
+          </span>Discover
         </button>
         <button type="button" class="tab" data-tab="profile">
           <span class="tab-icon" aria-hidden="true">
