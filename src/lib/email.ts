@@ -86,9 +86,14 @@ async function deliverEmail({
 }): Promise<EmailDeliveryResult> {
   const resend = getResendClient();
 
-  // Development fallback: allow local testing without Resend credentials.
+  // Local / preview fallback: allow testing without Resend credentials.
+  // On Vercel production, email must be configured unless explicitly overridden.
   if (!resend || !inbox) {
-    if (process.env.NODE_ENV === "production" && process.env.ALLOW_DEV_EMAIL_FALLBACK !== "true") {
+    const isVercelProduction = process.env.VERCEL_ENV === "production";
+    const allowFallback =
+      process.env.ALLOW_DEV_EMAIL_FALLBACK === "true" || !isVercelProduction;
+
+    if (!allowFallback) {
       return {
         ok: false,
         error:

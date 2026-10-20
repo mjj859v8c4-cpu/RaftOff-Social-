@@ -48,7 +48,7 @@ Configure these in `.env.local` (local) and in the Vercel project settings (prod
 | `CONTACT_INBOX_EMAIL` | Optional | Inbox for contact form (falls back to booking inbox) |
 | `ALLOW_DEV_EMAIL_FALLBACK` | No | If `true`, logs emails instead of sending (dev only) |
 
-In local development, if Resend is not configured, form submissions are validated and logged to the server console so you can test the full UX safely.
+Outside Vercel production, if Resend is not configured, form submissions are validated and logged to the server console so you can test the full UX safely. On Vercel production, `RESEND_API_KEY` and `BOOKING_INBOX_EMAIL` are required (unless `ALLOW_DEV_EMAIL_FALLBACK=true`).
 
 **Never** put API keys in client components or `NEXT_PUBLIC_*` variables.
 
