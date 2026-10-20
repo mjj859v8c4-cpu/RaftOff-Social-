@@ -49,7 +49,7 @@ export function BookingForm() {
       serviceAddress: "",
       preferredDate: "",
       preferredTime: undefined,
-      consent: undefined,
+      consent: false,
       website: "",
     },
   });
@@ -127,7 +127,7 @@ export function BookingForm() {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="space-y-6"
+      className="relative space-y-6"
       noValidate
     >
       <div className="grid gap-5 sm:grid-cols-2">
@@ -290,9 +290,9 @@ export function BookingForm() {
             name="consent"
             render={({ field }) => (
               <Checkbox
-                checked={field.value === true}
+                checked={field.value}
                 onCheckedChange={(checked) =>
-                  field.onChange(checked === true ? true : undefined)
+                  field.onChange(checked === true)
                 }
                 id="consent"
                 aria-invalid={!!errors.consent}

@@ -54,10 +54,8 @@ export const bookingSchema = z.object({
   preferredTime: z.enum(TIME_WINDOWS, {
     required_error: "Select a preferred time window.",
   }),
-  consent: z.literal(true, {
-    errorMap: () => ({
-      message: "Consent is required to submit this request.",
-    }),
+  consent: z.boolean().refine((value) => value === true, {
+    message: "Consent is required to submit this request.",
   }),
   website: z.string().max(0).optional().or(z.literal("")),
 });
@@ -80,10 +78,8 @@ export const contactSchema = z.object({
     .trim()
     .min(10, "Please include a short message.")
     .max(2000),
-  consent: z.literal(true, {
-    errorMap: () => ({
-      message: "Consent is required to submit this message.",
-    }),
+  consent: z.boolean().refine((value) => value === true, {
+    message: "Consent is required to submit this message.",
   }),
   website: z.string().max(0).optional().or(z.literal("")),
 });

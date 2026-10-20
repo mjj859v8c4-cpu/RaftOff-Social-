@@ -33,7 +33,7 @@ export function ContactForm() {
       phone: "",
       email: "",
       message: "",
-      consent: undefined,
+      consent: false,
       website: "",
     },
   });
@@ -102,7 +102,11 @@ export function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" noValidate>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="relative space-y-5"
+      noValidate
+    >
       <div>
         <Label className="mb-2 block">Full name</Label>
         <Input {...register("fullName")} aria-invalid={!!errors.fullName} />
@@ -164,9 +168,9 @@ export function ContactForm() {
             render={({ field }) => (
               <Checkbox
                 id="contact-consent"
-                checked={field.value === true}
+                checked={field.value}
                 onCheckedChange={(checked) =>
-                  field.onChange(checked === true ? true : undefined)
+                  field.onChange(checked === true)
                 }
               />
             )}
