@@ -108,16 +108,25 @@ export function ContactForm() {
       noValidate
     >
       <div>
-        <Label className="mb-2 block">Full name</Label>
-        <Input {...register("fullName")} aria-invalid={!!errors.fullName} />
+        <Label htmlFor="contact-fullName" className="mb-2 block">
+          Full name
+        </Label>
+        <Input
+          id="contact-fullName"
+          {...register("fullName")}
+          aria-invalid={!!errors.fullName}
+        />
         {errors.fullName && (
           <p className="mt-1.5 text-sm text-red-400">{errors.fullName.message}</p>
         )}
       </div>
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
-          <Label className="mb-2 block">Phone</Label>
+          <Label htmlFor="contact-phone" className="mb-2 block">
+            Phone
+          </Label>
           <Input
+            id="contact-phone"
             type="tel"
             {...register("phone")}
             aria-invalid={!!errors.phone}
@@ -127,8 +136,11 @@ export function ContactForm() {
           )}
         </div>
         <div>
-          <Label className="mb-2 block">Email</Label>
+          <Label htmlFor="contact-email" className="mb-2 block">
+            Email
+          </Label>
           <Input
+            id="contact-email"
             type="email"
             {...register("email")}
             aria-invalid={!!errors.email}
@@ -139,8 +151,11 @@ export function ContactForm() {
         </div>
       </div>
       <div>
-        <Label className="mb-2 block">Message</Label>
+        <Label htmlFor="contact-message" className="mb-2 block">
+          Message
+        </Label>
         <Textarea
+          id="contact-message"
           rows={5}
           {...register("message")}
           aria-invalid={!!errors.message}

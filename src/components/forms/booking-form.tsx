@@ -131,15 +131,17 @@ export function BookingForm() {
       noValidate
     >
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Full name" error={errors.fullName?.message}>
+        <Field htmlFor="fullName" label="Full name" error={errors.fullName?.message}>
           <Input
+            id="fullName"
             autoComplete="name"
             {...register("fullName")}
             aria-invalid={!!errors.fullName}
           />
         </Field>
-        <Field label="Phone number" error={errors.phone?.message}>
+        <Field htmlFor="phone" label="Phone number" error={errors.phone?.message}>
           <Input
+            id="phone"
             type="tel"
             autoComplete="tel"
             placeholder="(248) 555-0100"
@@ -147,8 +149,14 @@ export function BookingForm() {
             aria-invalid={!!errors.phone}
           />
         </Field>
-        <Field label="Email" error={errors.email?.message} className="sm:col-span-2">
+        <Field
+          htmlFor="email"
+          label="Email"
+          error={errors.email?.message}
+          className="sm:col-span-2"
+        >
           <Input
+            id="email"
             type="email"
             autoComplete="email"
             {...register("email")}
@@ -158,23 +166,38 @@ export function BookingForm() {
       </div>
 
       <div className="grid gap-5 sm:grid-cols-3">
-        <Field label="Vehicle year" error={errors.vehicleYear?.message}>
+        <Field
+          htmlFor="vehicleYear"
+          label="Vehicle year"
+          error={errors.vehicleYear?.message}
+        >
           <Input
+            id="vehicleYear"
             inputMode="numeric"
             placeholder="2018"
             {...register("vehicleYear")}
             aria-invalid={!!errors.vehicleYear}
           />
         </Field>
-        <Field label="Vehicle make" error={errors.vehicleMake?.message}>
+        <Field
+          htmlFor="vehicleMake"
+          label="Vehicle make"
+          error={errors.vehicleMake?.message}
+        >
           <Input
+            id="vehicleMake"
             placeholder="Toyota"
             {...register("vehicleMake")}
             aria-invalid={!!errors.vehicleMake}
           />
         </Field>
-        <Field label="Vehicle model" error={errors.vehicleModel?.message}>
+        <Field
+          htmlFor="vehicleModel"
+          label="Vehicle model"
+          error={errors.vehicleModel?.message}
+        >
           <Input
+            id="vehicleModel"
             placeholder="Camry"
             {...register("vehicleModel")}
             aria-invalid={!!errors.vehicleModel}
@@ -183,10 +206,12 @@ export function BookingForm() {
       </div>
 
       <Field
+        htmlFor="vehicleMileage"
         label="Vehicle mileage (optional)"
         error={errors.vehicleMileage?.message}
       >
         <Input
+          id="vehicleMileage"
           inputMode="numeric"
           placeholder="85,000"
           {...register("vehicleMileage")}
@@ -200,7 +225,10 @@ export function BookingForm() {
             name="serviceType"
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger aria-invalid={!!errors.serviceType}>
+                <SelectTrigger
+                  aria-label="Type of service"
+                  aria-invalid={!!errors.serviceType}
+                >
                   <SelectValue placeholder="Select a service" />
                 </SelectTrigger>
                 <SelectContent>
@@ -215,10 +243,12 @@ export function BookingForm() {
           />
         </Field>
         <Field
+          htmlFor="serviceAddress"
           label="Service address or ZIP code"
           error={errors.serviceAddress?.message}
         >
           <Input
+            id="serviceAddress"
             autoComplete="street-address"
             placeholder="Rochester Hills, MI 48309"
             {...register("serviceAddress")}
@@ -228,10 +258,12 @@ export function BookingForm() {
       </div>
 
       <Field
+        htmlFor="problemDescription"
         label="Description of problem"
         error={errors.problemDescription?.message}
       >
         <Textarea
+          id="problemDescription"
           rows={5}
           placeholder="Describe the symptoms, warning lights, or maintenance you need."
           {...register("problemDescription")}
@@ -240,8 +272,13 @@ export function BookingForm() {
       </Field>
 
       <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Preferred date" error={errors.preferredDate?.message}>
+        <Field
+          htmlFor="preferredDate"
+          label="Preferred date"
+          error={errors.preferredDate?.message}
+        >
           <Input
+            id="preferredDate"
             type="date"
             {...register("preferredDate")}
             aria-invalid={!!errors.preferredDate}
@@ -256,7 +293,10 @@ export function BookingForm() {
             name="preferredTime"
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value}>
-                <SelectTrigger aria-invalid={!!errors.preferredTime}>
+                <SelectTrigger
+                  aria-label="Preferred time window"
+                  aria-invalid={!!errors.preferredTime}
+                >
                   <SelectValue placeholder="Select a time window" />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,15 +379,19 @@ function Field({
   error,
   children,
   className,
+  htmlFor,
 }: {
   label: string;
   error?: string;
   children: React.ReactNode;
   className?: string;
+  htmlFor?: string;
 }) {
   return (
     <div className={className}>
-      <Label className="mb-2 block">{label}</Label>
+      <Label htmlFor={htmlFor} className="mb-2 block">
+        {label}
+      </Label>
       {children}
       {error && <p className="mt-1.5 text-sm text-red-400">{error}</p>}
     </div>
