@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+:root {
+  --neon: #7cff00;
+  --black: #080b0a;
+  --charcoal: #171c1a;
+  --white: #ffffff;
+  --muted: #b9c0bd;
+  --dark-green: #193a17;
+  --background: var(--black);
+  --foreground: var(--white);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-neon: var(--neon);
+  --color-black: var(--black);
+  --color-charcoal: var(--charcoal);
+  --color-muted: var(--muted);
+  --color-dark-green: var(--dark-green);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: var(--font-body), system-ui, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--neon) 45%, transparent);
+  color: var(--white);
+}
+
+:focus-visible {
+  outline: 2px solid var(--neon);
+  outline-offset: 2px;
+}
+
+.texture-grid {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="Rochester Mobile Auto Repair">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#080B0A"/>
+      <stop offset="55%" stop-color="#171C1A"/>
+      <stop offset="100%" stop-color="#193A17"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="70%" cy="40%" r="45%">
+      <stop offset="0%" stop-color="#7CFF00" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#7CFF00" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <circle cx="980" cy="180" r="90" fill="none" stroke="#7CFF00" stroke-width="8" opacity="0.85"/>
+  <circle cx="980" cy="180" r="28" fill="#7CFF00"/>
+  <g stroke="#7CFF00" stroke-width="8" stroke-linecap="round" opacity="0.85">
+    <path d="M980 70v40M980 250v40M870 180h40M1050 180h40"/>
+    <path d="M905 105l28 28M1027 227l28 28M1055 105l-28 28M933 227l-28 28"/>
+  </g>
+  <text x="80" y="250" fill="#7CFF00" font-family="Arial Narrow, Helvetica, sans-serif" font-size="36" letter-spacing="10" font-weight="700">ROCHESTER</text>
+  <text x="80" y="340" fill="#FFFFFF" font-family="Arial Narrow, Helvetica, sans-serif" font-size="72" letter-spacing="4" font-weight="800">MOBILE AUTO REPAIR</text>
+  <text x="80" y="420" fill="#B9C0BD" font-family="Helvetica, Arial, sans-serif" font-size="28">Quality Repairs. At Your Location.</text>
+  <text x="80" y="520" fill="#7CFF00" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700">(248) 928-4118</text>
+</svg>
